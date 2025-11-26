@@ -15,9 +15,19 @@ export async function POST(req: Request) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+    // Better error message with debugging info
     if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Missing Supabase environment variables:");
+      console.error("URL:", supabaseUrl ? "Found" : "MISSING");
+      console.error("Key:", supabaseAnonKey ? "Found" : "MISSING");
+      
       return NextResponse.json(
-        { error: "Server configuration error" },
+        { 
+          error: "Server configuration error. Please check your .env.local file and restart the server.",
+          details: process.env.NODE_ENV === 'development' 
+            ? `Missing: ${!supabaseUrl ? 'NEXT_PUBLIC_SUPABASE_URL' : ''} ${!supabaseAnonKey ? 'NEXT_PUBLIC_SUPABASE_ANON_KEY' : ''}`.trim()
+            : undefined
+        },
         { status: 500 }
       );
     }

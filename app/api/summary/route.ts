@@ -15,12 +15,19 @@ type Transaction = {
 let supabaseClient: any = null;
 try {
   const { createClient } = require("@supabase/supabase-js");
-  const url = process.env.SUPABASE_URL;
+  // Use the same variable names as auth routes
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (url && key) {
     supabaseClient = createClient(url, key);
+  } else {
+    console.error("Supabase not configured:", {
+      hasUrl: !!url,
+      hasKey: !!key,
+    });
   }
 } catch (e) {
+  console.error("Failed to initialize Supabase:", e);
   // Supabase not available, will use fallback
 }
 

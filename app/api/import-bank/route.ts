@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file");
     const mode = (formData.get("mode") as string) || "preview"; // "preview" | "import"
+    const userId = formData.get("user_id") as string; // Get user_id from form data
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
@@ -29,12 +30,22 @@ export async function POST(req: NextRequest) {
     }
 
     // IMPORT: only run if Supabase is configured
-    const url = process.env.SUPABASE_URL;
+    // Use the same variable names as other routes
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
     if (!url || !key) {
+      console.error("Supabase not configured:", { hasUrl: !!url, hasKey: !!key });
       return NextResponse.json(
         { error: "Supabase is not configured on the server." },
         { status: 500 }
+      );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required for importing transactions." },
+        { status: 400 }
       );
     }
 
@@ -42,12 +53,14 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase.from("transactions").insert(
       parsed.map((t) => ({
+        user_id: userId, // Link transactions to user
         date: t.date,
         description: t.description,
         merchant: t.merchant,
         amount: t.amount,
         type: t.type,
         category: t.category,
+        source: "bank_csv",
         raw: t,
       }))
     );

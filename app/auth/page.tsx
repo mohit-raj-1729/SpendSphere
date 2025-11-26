@@ -21,16 +21,33 @@ export default function AuthPage() {
       const endpoint = isSignUp ? "/api/auth/signup" : "/api/auth/signin";
       const body = isSignUp ? { email, password, name } : { email, password };
 
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      let res;
+      try {
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } catch (fetchError: any) {
+        // Network error (server not running, connection failed, etc.)
+        throw new Error(
+          `Network error: ${fetchError.message || "Could not connect to server. Make sure the dev server is running."}`
+        );
+      }
 
-      const data = await res.json();
+      // Check if response is ok before trying to parse JSON
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        // Response is not valid JSON
+        throw new Error(`Server returned invalid response. Status: ${res.status}`);
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || `Server error: ${res.status}`);
+        // Show the error message from the API
+        const errorMessage = data.error || `Server error: ${res.status}`;
+        throw new Error(errorMessage);
       }
 
       // For sign up, session might be null if email confirmation is required

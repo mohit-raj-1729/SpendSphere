@@ -49,12 +49,23 @@ export default function ImportPage() {
 
   const handleImport = async () => {
     if (!file) return;
+    
+    // Get user_id from localStorage (set during login)
+    const userId = localStorage.getItem("user_id");
+    
+    if (!userId) {
+      // Redirect to login if not logged in
+      window.location.href = "/auth";
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     const formData = new FormData();
     formData.append("file", file);
     formData.append("mode", "import");
+    formData.append("user_id", userId); // ← Add this line
 
     const res = await fetch("/api/import-bank", {
       method: "POST",
