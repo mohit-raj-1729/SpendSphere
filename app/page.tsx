@@ -1,4 +1,4 @@
-import Image from "next/image";
+import image from "next/image";
 
 // app/page.tsx
 export default function Home() {
@@ -16,16 +16,16 @@ export default function Home() {
         </div>
         <nav className="flex gap-3 text-sm">
           <a
-            href="/app"
+            href="/auth"
             className="text-slate-600 hover:text-slate-900 font-medium"
           >
-            Dashboard
+            Log in
           </a>
           <a
-            href="/coach"
+            href="/auth"
             className="px-3 py-1.5 rounded-full bg-violet-500 text-white text-xs font-semibold hover:bg-violet-600"
           >
-            Talk to Coach
+            Sign up
           </a>
         </nav>
       </header>
@@ -44,10 +44,10 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
-              href="/app"
+              href="/auth"
               className="px-5 py-2.5 rounded-full bg-violet-500 text-white text-sm font-semibold hover:bg-violet-600 transition-colors"
             >
-              Start saving
+              Get started
             </a>
             <a
               href="/coach"

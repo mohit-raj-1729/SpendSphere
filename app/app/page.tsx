@@ -1,7 +1,5 @@
 "use client";
 
-// app/app/page.tsx
-
 import { useEffect, useState } from "react";
 
 type Summary = {
@@ -22,146 +20,58 @@ type Transaction = {
   category: string;
   type: "income" | "expense";
   amount: number;
+  merchant?: string | null;
 };
-
-type Wallet = {
-  id: string;
-  name: string;
-  balance: number;
-  currency: string;
-  type: "bank" | "card" | "cash";
-};
-
-type Goal = {
-  id: string;
-  name: string;
-  targetAmount: number;
-  currentAmount: number;
-  deadline: string;
-};
-
-type BudgetCategory = {
-  id: string;
-  name: string;
-  limit: number;
-  spent: number;
-};
-
-const mockSummary: Summary = {
-  month: "This month",
-  totalBalance: 15700,
-  income: 8500,
-  expense: 6222,
-  currency: "INR", // was "USD"
-  totalTransactions: 50,
-  incomeTransactions: 27,
-  expenseTransactions: 23,
-};
-
-const mockTransactions: Transaction[] = [
-  {
-    id: "t1",
-    date: "2025-11-01",
-    description: "Salary",
-    category: "Income",
-    type: "income",
-    amount: 5000,
-  },
-  {
-    id: "t2",
-    date: "2025-11-02",
-    description: "Rent",
-    category: "Housing",
-    type: "expense",
-    amount: 1800,
-  },
-  {
-    id: "t3",
-    date: "2025-11-03",
-    description: "Groceries",
-    category: "Food & Groceries",
-    type: "expense",
-    amount: 230,
-  },
-  {
-    id: "t4",
-    date: "2025-11-04",
-    description: "Coffee shop",
-    category: "Cafes & Restaurants",
-    type: "expense",
-    amount: 18,
-  },
-  {
-    id: "t5",
-    date: "2025-11-05",
-    description: "Freelance payment",
-    category: "Income",
-    type: "income",
-    amount: 650,
-  },
-];
-
-const mockWallets: Wallet[] = [
-  { id: "w1", name: "Main Bank Account", balance: 9200, currency: "INR", type: "bank" },
-  { id: "w2", name: "Savings Account", balance: 4100, currency: "INR", type: "bank" },
-  { id: "w3", name: "Cash", balance: 400, currency: "INR", type: "cash" },
-];
-
-const mockGoals: Goal[] = [
-  {
-    id: "g1",
-    name: "Emergency fund",
-    targetAmount: 5000,
-    currentAmount: 3000,
-    deadline: "2026-01-01",
-  },
-  {
-    id: "g2",
-    name: "New laptop",
-    targetAmount: 1500,
-    currentAmount: 600,
-    deadline: "2025-12-31",
-  },
-];
-
-const mockBudgets: BudgetCategory[] = [
-  { id: "b1", name: "Food & Groceries", limit: 600, spent: 420 },
-  { id: "b2", name: "Housing", limit: 1800, spent: 1800 },
-  { id: "b3", name: "Entertainment", limit: 200, spent: 130 },
-  { id: "b4", name: "Transport", limit: 150, spent: 95 },
-];
 
 export default function AppDashboard() {
   const [activeSection, setActiveSection] = useState<
     "Dashboard" | "Transactions" | "Wallet" | "Goals" | "Budget" | "Analytics" | "Settings"
   >("Analytics");
 
-  // Summary (from /api/summary, with mock fallback)
+  // Summary - NO MOCK DATA, starts as null
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
-  // Transactions (from /api/transactions, with mock fallback)
+  // Transactions - NO MOCK DATA, starts empty
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [transactionsError, setTransactionsError] = useState<string | null>(null);
   const [transactionSearch, setTransactionSearch] = useState("");
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<"all" | "income" | "expense">(
     "all"
   );
 
-  // Money coach (uses /api/coach)
+  // Money coach
   const [coachQuestion, setCoachQuestion] = useState("");
   const [coachAnswer, setCoachAnswer] = useState("");
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachError, setCoachError] = useState<string | null>(null);
 
-  const s = summary ?? mockSummary;
+  // Default summary when no data (all zeros)
+  const defaultSummary: Summary = {
+    month: "This month",
+    totalBalance: 0,
+    income: 0,
+    expense: 0,
+    currency: "INR",
+    totalTransactions: 0,
+    incomeTransactions: 0,
+    expenseTransactions: 0,
+  };
+
+  const s = summary ?? defaultSummary;
 
   useEffect(() => {
-    // Load summary and transactions on first load
     void loadSummary();
     void loadTransactions();
+    
+    // Auto-refresh every 5 seconds
+    const interval = setInterval(() => {
+      void loadSummary();
+      void loadTransactions();
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   async function loadSummary() {
@@ -178,8 +88,8 @@ export default function AppDashboard() {
       setSummary(data);
     } catch (err) {
       console.error("Summary API request failed", err);
-      setSummaryError("Could not load summary. Showing example data instead.");
-      setSummary(null); // fallback to mockSummary via `s`
+      setSummaryError("Could not load summary.");
+      setSummary(null); // Will use defaultSummary (all zeros)
     } finally {
       setLoadingSummary(false);
     }
@@ -197,16 +107,15 @@ export default function AppDashboard() {
 
       const data = (await res.json()) as Transaction[];
 
-      if (!Array.isArray(data) || data.length === 0) {
-        // fallback to mock data if API returns nothing
-        setTransactions(mockTransactions);
+      if (!Array.isArray(data)) {
+        setTransactions([]);
       } else {
         setTransactions(data);
       }
     } catch (err) {
       console.error("Transactions API request failed", err);
-      setTransactionsError("Could not load transactions. Showing example data instead.");
-      setTransactions(mockTransactions);
+      setTransactionsError("Could not load transactions.");
+      setTransactions([]); // NO MOCK DATA - empty array
     } finally {
       setTransactionsLoading(false);
     }
@@ -252,10 +161,25 @@ export default function AppDashboard() {
 
   const totalIncome = filteredTransactions
     .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount), 0);
   const totalExpense = filteredTransactions
     .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  // Calculate category totals from real transactions
+  const categoryTotals: Record<string, number> = {};
+  transactions
+    .filter((t) => t.type === "expense")
+    .forEach((t) => {
+      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Number(t.amount);
+    });
+
+  const budgetByCategory = Object.entries(categoryTotals).map(([cat, spent]) => ({
+    id: cat,
+    name: cat,
+    limit: spent * 1.2, // Budget is 20% more than spent
+    spent,
+  }));
 
   const headerTitleMap: Record<typeof activeSection, string> = {
     Dashboard: "Dashboard",
@@ -348,15 +272,24 @@ export default function AppDashboard() {
             <p className="text-xs text-slate-400">{headerSubMap[activeSection]}</p>
           </div>
           <div className="flex items-center gap-4">
+            <a
+              href="/import"
+              className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white font-medium"
+            >
+              Import CSV
+            </a>
             <button className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-xs text-slate-600 bg-slate-50">
               <span>📅</span>
               <span>{s.month}</span>
             </button>
             <button
               className="px-3 py-1.5 rounded-full text-xs bg-slate-100 text-slate-600"
-              onClick={loadSummary}
+              onClick={() => {
+                void loadSummary();
+                void loadTransactions();
+              }}
             >
-              {loadingSummary ? "Refreshing..." : "Refresh summary"}
+              {loadingSummary ? "Refreshing..." : "🔄 Refresh"}
             </button>
             <button
               className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white font-medium"
@@ -372,7 +305,7 @@ export default function AppDashboard() {
 
         {/* Scrollable body */}
         <main className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
-          {/* Analytics (existing detailed view) */}
+          {/* Analytics */}
           {activeSection === "Analytics" && (
             <>
               {summaryError && (
@@ -387,188 +320,132 @@ export default function AppDashboard() {
                   title="Total balance"
                   amount={s.totalBalance}
                   currency={s.currency}
-                  change="+12.1%"
-                  sub={`You have extra ₹1,700\ncompared to last month`}
+                  change={s.totalTransactions > 0 ? "+0%" : "0%"}
+                  sub={s.totalTransactions > 0 ? `Based on ${s.totalTransactions} transactions` : "No transactions yet. Import CSV to get started."}
                   badge={`${s.totalTransactions} transactions • ${s.incomeTransactions} income / ${s.expenseTransactions} expense`}
                 />
                 <StatCard
                   title="Income"
                   amount={s.income}
                   currency={s.currency}
-                  change="+6.3%"
-                  sub="You earn extra ₹500 compared to last month"
+                  change={s.incomeTransactions > 0 ? "+0%" : "0%"}
+                  sub={s.incomeTransactions > 0 ? `${s.incomeTransactions} income transactions` : "No income recorded"}
                   badge={`${s.incomeTransactions} income transactions`}
                 />
                 <StatCard
                   title="Expense"
                   amount={s.expense}
                   currency={s.currency}
-                  change="-7.2%"
+                  change={s.expenseTransactions > 0 ? "-0%" : "0%"}
                   negative
-                  sub="You spent extra ₹1,222 compared to last month"
+                  sub={s.expenseTransactions > 0 ? `${s.expenseTransactions} expense transactions` : "No expenses recorded"}
                   badge={`${s.expenseTransactions} expense transactions`}
                 />
               </section>
 
               {/* Middle: total balance overview + stats */}
               <section className="grid gap-4 lg:grid-cols-[2.2fr,1.1fr]">
-                {/* Total balance overview (fake area chart) */}
                 <div className="bg-white rounded-3xl border border-slate-200 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h2 className="text-sm font-semibold">Total balance overview</h2>
                       <p className="text-[11px] text-slate-400">{s.month}</p>
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100">
-                        This month
-                      </span>
-                      <span>Same period last month</span>
-                      <span>Total balance</span>
-                    </div>
                   </div>
-                  <div className="h-40 bg-slate-50 rounded-2xl relative overflow-hidden">
-                    {/* Simple fake line/area representation */}
-                    <div className="absolute inset-x-4 bottom-6 flex items-end gap-4">
-                      {["Jan", "Feb", "Mar", "Apr", "May", "Jun"].map((m) => (
-                        <div key={m} className="flex-1 flex flex-col items-center gap-1">
-                          <div className="w-full h-16 bg-gradient-to-t from-violet-200 to-violet-400 rounded-full opacity-70" />
-                          <span className="text-[10px] text-slate-400">{m}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="absolute left-6 top-6 px-2 py-1 rounded-full bg-white shadow text-[10px] text-slate-600">
-                      ₹{s.totalBalance.toLocaleString()}
-                    </div>
+                  <div className="h-40 bg-slate-50 rounded-2xl relative overflow-hidden flex items-center justify-center">
+                    {s.totalBalance === 0 ? (
+                      <p className="text-xs text-slate-400">No data to display</p>
+                    ) : (
+                      <div className="absolute left-6 top-6 px-2 py-1 rounded-full bg-white shadow text-[10px] text-slate-600">
+                        ₹{s.totalBalance.toLocaleString()}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Statistics donut */}
                 <div className="bg-white rounded-3xl border border-slate-200 p-4 flex flex-col">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h2 className="text-sm font-semibold">Statistics</h2>
                       <p className="text-[11px] text-slate-400">This month expense</p>
                     </div>
-                    <div className="flex gap-2 text-[11px] text-slate-500">
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100">
-                        Expense
-                      </span>
-                      <span>Details</span>
-                    </div>
                   </div>
-                  <div className="flex-1 flex items-center justify-between gap-4">
-                    <div className="relative w-32 h-32">
-                      <div className="absolute inset-0 rounded-full border-[10px] border-slate-100" />
-                      <div className="absolute inset-1 rounded-full border-[10px] border-violet-400 border-t-transparent border-l-transparent rotate-[-45deg]" />
-                      <div className="absolute inset-5 bg-white rounded-full flex flex-col items-center justify-center">
-                        <span className="text-[10px] text-slate-400">This month</span>
-                        <span className="text-sm font-semibold">
-                          ₹{s.expense.toLocaleString()}
-                        </span>
+                  {s.expense === 0 ? (
+                    <div className="flex-1 flex items-center justify-center py-8">
+                      <p className="text-xs text-slate-400">No expenses this month</p>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-between gap-4">
+                      <div className="relative w-32 h-32">
+                        <div className="absolute inset-0 rounded-full border-[10px] border-slate-100" />
+                        <div className="absolute inset-1 rounded-full border-[10px] border-violet-400 border-t-transparent border-l-transparent rotate-[-45deg]" />
+                        <div className="absolute inset-5 bg-white rounded-full flex flex-col items-center justify-center">
+                          <span className="text-[10px] text-slate-400">This month</span>
+                          <span className="text-sm font-semibold">
+                            ₹{s.expense.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-1 space-y-2 text-[11px]">
+                        {Object.entries(categoryTotals).slice(0, 5).map(([cat, amt]) => {
+                          const pct = Math.round((amt / s.expense) * 100);
+                          return (
+                            <LegendItem
+                              key={cat}
+                              color="bg-violet-500"
+                              label={cat}
+                              value={`${pct}%`}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
-                    <div className="flex-1 space-y-2 text-[11px]">
-                      <LegendItem color="bg-violet-500" label="Money transfer" value="24%" />
-                      <LegendItem
-                        color="bg-indigo-400"
-                        label="Cafes & Restaurants"
-                        value="18%"
-                      />
-                      <LegendItem color="bg-sky-400" label="Rent" value="30%" />
-                      <LegendItem color="bg-emerald-400" label="Education" value="12%" />
-                      <LegendItem
-                        color="bg-amber-400"
-                        label="Food & Groceries"
-                        value="16%"
-                      />
-                    </div>
-                  </div>
+                  )}
                 </div>
               </section>
 
-              {/* Bottom: comparing budget and expense */}
+              {/* Budget comparison */}
               <section className="bg-white rounded-3xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h2 className="text-sm font-semibold">Comparing budget and expense</h2>
-                    <p className="text-[11px] text-slate-400">This year</p>
-                  </div>
-                  <div className="flex gap-3 text-[11px] text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded bg-violet-400" /> Expense
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded bg-slate-300" /> Budget
-                    </span>
+                    <p className="text-[11px] text-slate-400">This month</p>
                   </div>
                 </div>
-                <div className="h-40 flex items-end gap-4 px-4">
-                  {["Jan", "Feb", "Mar", "Apr", "May"].map((m) => (
-                    <div key={m} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-7 rounded-t-xl bg-slate-200 h-16 relative overflow-hidden">
-                        <div className="absolute bottom-0 left-0 right-0 bg-violet-400 h-10 rounded-t-xl" />
-                      </div>
-                      <span className="text-[10px] text-slate-400">{m}</span>
-                    </div>
-                  ))}
-                </div>
+                {budgetByCategory.length === 0 ? (
+                  <div className="h-40 flex items-center justify-center">
+                    <p className="text-xs text-slate-400">No budget data. Import CSV to see your spending breakdown.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-[11px]">
+                    {budgetByCategory.map((b) => {
+                      const pct = Math.round((b.spent / b.limit) * 100);
+                      return (
+                        <div key={b.id} className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">{b.name}</span>
+                            <span className="text-slate-500">
+                              ₹{b.spent.toLocaleString()} / ₹{b.limit.toLocaleString()} ({pct}%)
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                pct > 100 ? "bg-rose-400" : "bg-violet-400"
+                              }`}
+                              style={{ width: `${Math.min(pct, 120)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             </>
           )}
 
-          {/* Dashboard: quick summary, next actions, coach shortcut */}
-          {activeSection === "Dashboard" && (
-            <section className="space-y-4">
-              {summaryError && (
-                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-2 rounded-2xl">
-                  {summaryError}
-                </p>
-              )}
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <StatCard
-                  title="Total balance"
-                  amount={s.totalBalance}
-                  currency={s.currency}
-                  change="+12.1%"
-                  sub="Your money across all wallets."
-                  badge={`${s.totalTransactions} transactions this month`}
-                />
-                <StatCard
-                  title="Planned budgets used"
-                  amount={mockBudgets.reduce((sum, b) => sum + b.spent, 0)}
-                  currency={s.currency}
-                  change="+3.1%"
-                  sub="Total spending across all budget categories."
-                  badge={`${mockBudgets.length} categories`}
-                />
-                <StatCard
-                  title="Goals funded"
-                  amount={mockGoals.reduce((sum, g) => sum + g.currentAmount, 0)}
-                  currency={s.currency}
-                  change="+4.5%"
-                  sub="How much you have already saved towards your goals."
-                  badge={`${mockGoals.length} goals`}
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="bg-white rounded-3xl border border-slate-200 p-4">
-                  <h2 className="text-sm font-semibold mb-2">Next helpful actions</h2>
-                  <ul className="text-xs text-slate-600 space-y-2">
-                    <li>• Check your latest transactions for any unusual charges.</li>
-                    <li>• Move a small amount to your savings or emergency fund.</li>
-                    <li>• Review monthly subscriptions you don't really use.</li>
-                  </ul>
-                </div>
-
-                <QuickCoachCard />
-              </div>
-            </section>
-          )}
-
-          {/* Transactions: list + filters + totals */}
+          {/* Transactions */}
           {activeSection === "Transactions" && (
             <section className="bg-white rounded-3xl border border-slate-200 p-4 text-sm space-y-4">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -631,29 +508,40 @@ export default function AppDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTransactions.map((t) => (
-                      <tr key={t.id} className="border-t border-slate-100">
-                        <td className="px-4 py-2 text-slate-500">{t.date}</td>
-                        <td className="px-4 py-2 text-slate-700">{t.description}</td>
-                        <td className="px-4 py-2 text-slate-500">{t.category}</td>
-                        <td
-                          className={`px-4 py-2 text-right font-medium ${
-                            t.type === "income" ? "text-emerald-600" : "text-rose-600"
-                          }`}
-                        >
-                          {t.type === "income" ? "+" : "-"}{t.amount.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredTransactions.length === 0 && (
+                    {filteredTransactions.length === 0 ? (
                       <tr>
                         <td
                           colSpan={4}
-                          className="px-4 py-4 text-center text-slate-400 text-[11px]"
+                          className="px-4 py-8 text-center text-slate-400 text-[11px]"
                         >
-                          No transactions match your filters.
+                          {transactions.length === 0 ? (
+                            <>
+                              No transactions yet.{" "}
+                              <a href="/import" className="text-violet-500 hover:underline">
+                                Import your bank CSV
+                              </a>{" "}
+                              to get started.
+                            </>
+                          ) : (
+                            "No transactions match your filters."
+                          )}
                         </td>
                       </tr>
+                    ) : (
+                      filteredTransactions.map((t) => (
+                        <tr key={t.id} className="border-t border-slate-100">
+                          <td className="px-4 py-2 text-slate-500">{t.date}</td>
+                          <td className="px-4 py-2 text-slate-700">{t.description}</td>
+                          <td className="px-4 py-2 text-slate-500">{t.category}</td>
+                          <td
+                            className={`px-4 py-2 text-right font-medium ${
+                              t.type === "income" ? "text-emerald-600" : "text-rose-600"
+                            }`}
+                          >
+                            {t.type === "income" ? "+" : "-"}₹{Number(t.amount).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -661,171 +549,140 @@ export default function AppDashboard() {
             </section>
           )}
 
-          {/* Wallet: accounts overview */}
-          {activeSection === "Wallet" && (
-            <section className="bg-white rounded-3xl border border-slate-200 p-4 text-sm space-y-4">
-              <p className="text-xs text-slate-500">
-                Your balances across different accounts and wallets.
-              </p>
-              <div className="grid gap-3 md:grid-cols-3">
-                {mockWallets.map((w) => (
-                  <div
-                    key={w.id}
-                    className="border border-slate-100 rounded-2xl px-4 py-3 flex flex-col gap-1"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-500">{w.type.toUpperCase()}</span>
-                      <span className="text-[10px] text-slate-400">Wallet</span>
-                    </div>
-                    <div className="text-sm font-semibold text-slate-800">{w.name}</div>
-                    <div className="text-xs text-slate-500">
-                      {w.currency} {w.balance.toLocaleString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Goals: savings goals + coach widget */}
-          {activeSection === "Goals" && (
+          {/* Other sections - simplified */}
+          {activeSection === "Dashboard" && (
             <section className="space-y-4">
-              <div className="grid gap-4 lg:grid-cols-[1.7fr,1.3fr]">
-                <div className="bg-white rounded-3xl border border-slate-200 p-4 text-sm">
-                  <h2 className="text-sm font-semibold mb-3">Savings goals</h2>
-                  <div className="space-y-3">
-                    {mockGoals.map((g) => {
-                      const progress = Math.min(
-                        100,
-                        Math.round((g.currentAmount / g.targetAmount) * 100)
-                      );
-                      return (
-                        <div key={g.id} className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-700">{g.name}</span>
-                            <span className="text-slate-500">
-                              {progress}% • {g.currentAmount.toLocaleString()} /{" "}
-                              {g.targetAmount.toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                            <div
-                              className="h-full bg-violet-500"
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                          <p className="text-[11px] text-slate-400">
-                            Target date: {g.deadline}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-3xl border border-slate-200 p-4 text-sm">
-                  <h2 className="text-sm font-semibold mb-2">Ask the money coach</h2>
-                  <p className="text-[11px] text-slate-500 mb-2">
-                    Ask for short, practical tips about your goals and budgets.
-                  </p>
-                  <textarea
-                    className="w-full text-xs border border-slate-200 rounded-2xl px-3 py-2 mb-2 focus:outline-none focus:ring-1 focus:ring-violet-400"
-                    rows={4}
-                    value={coachQuestion}
-                    onChange={(e) => setCoachQuestion(e.target.value)}
-                    placeholder="Example: How can I reach my emergency fund goal faster?"
-                  />
-                  <div className="flex items-center gap-2 mb-2">
-                    <button
-                      onClick={handleCoachAsk}
-                      disabled={coachLoading || !coachQuestion.trim()}
-                      className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {coachLoading ? "Asking coach..." : "Ask coach"}
-                    </button>
-                    {coachError && (
-                      <span className="text-[11px] text-rose-500">{coachError}</span>
-                    )}
-                  </div>
-                  {coachAnswer && (
-                    <div className="text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 whitespace-pre-line">
-                      {coachAnswer}
-                    </div>
-                  )}
-                </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <StatCard
+                  title="Total balance"
+                  amount={s.totalBalance}
+                  currency={s.currency}
+                  change="0%"
+                  sub="Your money across all transactions."
+                  badge={`${s.totalTransactions} transactions this month`}
+                />
+                <StatCard
+                  title="Income"
+                  amount={s.income}
+                  currency={s.currency}
+                  change="0%"
+                  sub="Total income this month."
+                  badge={`${s.incomeTransactions} income transactions`}
+                />
+                <StatCard
+                  title="Expense"
+                  amount={s.expense}
+                  currency={s.currency}
+                  change="0%"
+                  negative
+                  sub="Total expenses this month."
+                  badge={`${s.expenseTransactions} expense transactions`}
+                />
               </div>
             </section>
           )}
 
-          {/* Budget: categories usage */}
           {activeSection === "Budget" && (
             <section className="bg-white rounded-3xl border border-slate-200 p-4 text-sm space-y-4">
               <p className="text-xs text-slate-500">
                 Compare how much you planned to spend vs what you actually spent.
               </p>
-              <div className="grid gap-3 md:grid-cols-2">
-                {mockBudgets.map((b) => {
-                  const usedPercent = Math.min(100, Math.round((b.spent / b.limit) * 100));
-                  const over = b.spent > b.limit;
-                  return (
-                    <div
-                      key={b.id}
-                      className="border border-slate-100 rounded-2xl px-4 py-3 flex flex-col gap-2"
-                    >
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-700">{b.name}</span>
-                        <span
-                          className={`${
-                            over ? "text-rose-600" : "text-slate-500"
-                          } font-medium`}
-                        >
-                          {usedPercent}% used
-                        </span>
+              {budgetByCategory.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-400">
+                  <p>No budget data yet.</p>
+                  <p className="mt-1">
+                    <a href="/import" className="text-violet-500 hover:underline">
+                      Import your bank CSV
+                    </a>{" "}
+                    to see your spending breakdown.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {budgetByCategory.map((b) => {
+                    const usedPercent = Math.min(100, Math.round((b.spent / b.limit) * 100));
+                    const over = b.spent > b.limit;
+                    return (
+                      <div
+                        key={b.id}
+                        className="border border-slate-100 rounded-2xl px-4 py-3 flex flex-col gap-2"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-700">{b.name}</span>
+                          <span
+                            className={`${
+                              over ? "text-rose-600" : "text-slate-500"
+                            } font-medium`}
+                          >
+                            {usedPercent}% used
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className={`h-full ${
+                              over ? "bg-rose-500" : "bg-violet-500"
+                            }`}
+                            style={{ width: `${Math.min(100, usedPercent)}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
+                          <span>
+                            Spent: ₹{b.spent.toLocaleString()} / ₹{b.limit.toLocaleString()}
+                          </span>
+                          {over && <span className="text-rose-500">Over budget</span>}
+                        </div>
                       </div>
-                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className={`h-full ${
-                            over ? "bg-rose-500" : "bg-violet-500"
-                          }`}
-                          style={{ width: `${Math.min(100, usedPercent)}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
-                        <span>
-                          Spent: ₹{b.spent.toLocaleString()} / ₹{b.limit.toLocaleString()}
-                        </span>
-                        {over && <span className="text-rose-500">Over budget</span>}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeSection === "Goals" && (
+            <section className="space-y-4">
+              <div className="bg-white rounded-3xl border border-slate-200 p-4 text-sm">
+                <h2 className="text-sm font-semibold mb-2">Ask the money coach</h2>
+                <p className="text-[11px] text-slate-500 mb-2">
+                  Ask for short, practical tips about your finances.
+                </p>
+                <textarea
+                  className="w-full text-xs border border-slate-200 rounded-2xl px-3 py-2 mb-2 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                  rows={4}
+                  value={coachQuestion}
+                  onChange={(e) => setCoachQuestion(e.target.value)}
+                  placeholder="Example: How can I save more money?"
+                />
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    onClick={handleCoachAsk}
+                    disabled={coachLoading || !coachQuestion.trim()}
+                    className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {coachLoading ? "Asking coach..." : "Ask coach"}
+                  </button>
+                  {coachError && (
+                    <span className="text-[11px] text-rose-500">{coachError}</span>
+                  )}
+                </div>
+                {coachAnswer && (
+                  <div className="text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 whitespace-pre-line">
+                    {coachAnswer}
+                  </div>
+                )}
               </div>
             </section>
           )}
 
-          {/* Settings: simple toggles (pure UI for now) */}
+          {activeSection === "Wallet" && (
+            <section className="bg-white rounded-3xl border border-slate-200 p-4 text-sm space-y-4">
+              <p className="text-xs text-slate-400">Wallet feature coming soon.</p>
+            </section>
+          )}
+
           {activeSection === "Settings" && (
             <section className="bg-white rounded-3xl border border-slate-200 p-4 text-sm space-y-4">
-              <p className="text-xs text-slate-500">
-                Basic preferences (purely visual toggles in this demo).
-              </p>
-              <div className="space-y-3 text-xs">
-                <label className="flex items-center justify-between gap-4">
-                  <span className="text-slate-700">Dark mode</span>
-                  <input type="checkbox" className="h-4 w-4" disabled />
-                </label>
-                <label className="flex items-center justify-between gap-4">
-                  <span className="text-slate-700">Email alerts for big expenses</span>
-                  <input type="checkbox" className="h-4 w-4" disabled />
-                </label>
-                <label className="flex items-center justify-between gap-4">
-                  <span className="text-slate-700">Round-up savings</span>
-                  <input type="checkbox" className="h-4 w-4" disabled />
-                </label>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                In a real app these options would be saved to your profile.
-              </p>
+              <p className="text-xs text-slate-400">Settings feature coming soon.</p>
             </section>
           )}
         </main>
@@ -881,7 +738,7 @@ function StatCard({
           <p className="text-[11px] text-slate-400">{title}</p>
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-semibold">
-              {currency} {amount.toLocaleString()}
+              ₹{amount.toLocaleString()}
             </span>
           </div>
         </div>
@@ -915,73 +772,6 @@ function LegendItem({
         <span className="text-slate-600">{label}</span>
       </div>
       <span className="text-slate-500">{value}</span>
-    </div>
-  );
-}
-
-function QuickCoachCard() {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleAsk() {
-    if (!question.trim()) return;
-    try {
-      setLoading(true);
-      setError(null);
-      setAnswer("");
-      const res = await fetch("/api/coach", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
-      });
-      if (!res.ok) throw new Error(`Coach API error: ${res.status}`);
-      const data = await res.json();
-      setAnswer(data.answer ?? "No answer returned.");
-    } catch (err) {
-      console.error("Quick coach error", err);
-      setError("Coach is not available right now.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-4">
-      <h2 className="text-sm font-semibold mb-2">Quick coach question</h2>
-      <p className="text-[11px] text-slate-500 mb-2">
-        Ask something like “How can I reduce my food expenses?” or
-        “How much should I save every month?”.
-      </p>
-      <textarea
-        className="w-full text-xs border border-slate-200 rounded-2xl px-3 py-2 mb-2 focus:outline-none focus:ring-1 focus:ring-violet-400"
-        rows={3}
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            void handleAsk();
-          }
-        }}
-        placeholder="Type your question..."
-      />
-      <div className="flex items-center gap-2 mb-2">
-        <button
-          onClick={handleAsk}
-          disabled={loading || !question.trim()}
-          className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {loading ? "Asking coach..." : "Ask coach"}
-        </button>
-        {error && <span className="text-[11px] text-rose-500">{error}</span>}
-      </div>
-      {answer && (
-        <div className="text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 whitespace-pre-line">
-          {answer}
-        </div>
-      )}
     </div>
   );
 }

@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SpendSphere
+
+SpendSphere is a budgeting and financial management application designed to help users track their income, expenses, and overall financial health. This application provides a user-friendly dashboard with various statistics, allowing users to make informed financial decisions.
+
+## Features
+
+- **Dashboard**: A comprehensive overview of your financial situation, including total balance, income, and expenses.
+- **Transactions Management**: Easily manage and track your transactions with options to add, edit, or delete entries.
+- **Budgeting Tools**: Set and compare budgets against actual spending to help you stay on track.
+- **Analytics**: Detailed insights into your spending habits and trends over time.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
+- Node.js (version 14 or higher)
+- npm (Node Package Manager)
+- A database (e.g., PostgreSQL, MySQL) configured for use with Prisma
+
+### Installation
+
+1. Clone the repository:
+
+   ```
+   git clone https://github.com/yourusername/spendsphere.git
+   ```
+
+2. Navigate to the project directory:
+
+   ```
+   cd spendsphere
+   ```
+
+3. Install the dependencies:
+
+   ```
+   npm install
+   ```
+
+4. Set up the database:
+
+   - Update the `DATABASE_URL` in the `.env` file with your database connection string.
+   - Run the Prisma migrations:
+
+   ```
+   npx prisma migrate dev --name init
+   ```
+
+### Running the Application
+
+To start the development server, run:
+
+```
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The application will be available at `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### API Endpoints
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **GET /api/summary**: Fetches the summary data for the current month.
+- **GET /api/transactions**: Retrieves a list of transactions.
+- **POST /api/transactions**: Adds a new transaction.
 
-## Learn More
+### Contributing
 
-To learn more about Next.js, take a look at the following resources:
+Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License. See the LICENSE file for details.
