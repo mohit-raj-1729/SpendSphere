@@ -1,214 +1,287 @@
 // app/app/page.tsx
+
 const mockSummary = {
-    month: "November 2025",
-    income: 65000,
-    expenses: 42000,
-    savings: 23000,
-    score: 82,
-    categoryTotals: {
-      Food: 9000,
-      Rent: 15000,
-      Travel: 4000,
-      Shopping: 7000,
-      Subscriptions: 3000,
-    },
-  };
-  
-  export default function AppDashboard() {
-    const { month, income, expenses, savings, score, categoryTotals } = mockSummary;
-  
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-50">
-        {/* Top nav */}
-        <header className="border-b border-slate-800/80 backdrop-blur sticky top-0 z-20 bg-slate-950/70">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl bg-emerald-500/90 shadow-lg shadow-emerald-500/40" />
-              <span className="font-semibold tracking-tight">FlowFunds</span>
+  month: "This month",
+  totalBalance: 15700,
+  income: 8500,
+  expense: 6222,
+  currency: "USD",
+  totalTransactions: 50,
+  incomeTransactions: 27,
+  expenseTransactions: 23,
+};
+
+export default function AppDashboard() {
+  const s = mockSummary;
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
+        <div className="px-6 py-5 flex items-center gap-2 border-b border-slate-100">
+          <div className="w-9 h-9 rounded-2xl bg-violet-500 flex items-center justify-center text-white font-bold">
+            F
+          </div>
+          <div>
+            <div className="text-sm font-semibold">FlowFunds</div>
+            <div className="text-[11px] text-slate-400">Smart budgeting</div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-4 py-4 space-y-1 text-sm">
+          <SidebarItem label="Dashboard" />
+          <SidebarItem label="Transactions" />
+          <SidebarItem label="Wallet" />
+          <SidebarItem label="Goals" />
+          <SidebarItem label="Budget" />
+          <SidebarItem label="Analytics" active />
+          <SidebarItem label="Settings" />
+        </nav>
+
+        <div className="px-4 pb-4 pt-2 border-t border-slate-100 text-xs space-y-2">
+          <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100">
+            <span>Help</span>
+          </button>
+          <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-50">
+            <span>Log out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col">
+        {/* Top bar */}
+        <header className="h-20 px-8 border-b border-slate-200 bg-white flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">Analytics</h1>
+            <p className="text-xs text-slate-400">
+              Detailed overview of your financial situation
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-xs text-slate-600 bg-slate-50">
+              <span>📅</span>
+              <span>This month</span>
+            </button>
+            <button className="px-3 py-1.5 rounded-full text-xs bg-slate-100 text-slate-600">
+              Manage widgets
+            </button>
+            <button className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white font-medium">
+              + Add new widget
+            </button>
+            <div className="w-9 h-9 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-xs">
+              AD
             </div>
-            <nav className="flex gap-3 text-sm">
-              <a href="/" className="text-slate-400 hover:text-slate-100">
-                Landing
-              </a>
-              <a href="/app" className="text-slate-100 font-medium">
-                Dashboard
-              </a>
-              <a
-                href="/coach"
-                className="px-3 py-1.5 rounded-full bg-emerald-500/90 text-slate-950 text-xs font-semibold"
-              >
-                Talk to Coach
-              </a>
-            </nav>
           </div>
         </header>
-  
-        {/* Main content */}
-        <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-          {/* Top row: score + month summary */}
-          <section className="grid gap-4 md:grid-cols-[2fr,1.2fr]">
-            {/* Score card */}
-            <div className="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-5 flex flex-col md:flex-row gap-6 relative overflow-hidden">
-              <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-emerald-500/10 blur-3xl" />
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Money Health
-                </p>
-                <div className="flex items-end gap-3 mt-1">
-                  <p className="text-5xl font-bold leading-none">{score}</p>
-                  <span className="text-xs text-emerald-400 mb-1">
-                    • {month}
-                  </span>
+
+        {/* Scrollable body */}
+        <main className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+          {/* Top cards */}
+          <section className="grid gap-4 md:grid-cols-3">
+            <StatCard
+              title="Total balance"
+              amount={s.totalBalance}
+              currency={s.currency}
+              change="+12.1%"
+              sub={`You have extra $1,700\ncompared to last month`}
+              badge="50 transactions • 15 categories"
+            />
+            <StatCard
+              title="Income"
+              amount={s.income}
+              currency={s.currency}
+              change="+6.3%"
+              sub="You earn extra $500 compared to last month"
+              badge="27 transactions • 8 categories"
+            />
+            <StatCard
+              title="Expense"
+              amount={s.expense}
+              currency={s.currency}
+              change="-7.2%"
+              negative
+              sub="You spent extra $1,222 compared to last month"
+              badge="23 transactions • 6 categories"
+            />
+          </section>
+
+          {/* Middle: total balance overview + stats */}
+          <section className="grid gap-4 lg:grid-cols-[2.2fr,1.1fr]">
+            {/* Total balance overview (fake area chart) */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-sm font-semibold">Total balance overview</h2>
+                  <p className="text-[11px] text-slate-400">{s.month}</p>
                 </div>
-                <p className="text-xs text-slate-300 mt-2 max-w-md">
-                  You’re on track to save{" "}
-                  <span className="font-semibold text-sky-400">
-                    ₹{savings.toLocaleString()}
-                  </span>{" "}
-                  this month. Keeping food and shopping under control pushes your
-                  score into the 90s.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
-                  <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
-                    Savings rate: {Math.round((savings / income) * 100)}%
+                <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                  <span className="px-2 py-0.5 rounded-full bg-slate-100">
+                    This month
                   </span>
-                  <span className="px-2 py-1 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/30">
-                    Expense control: {Math.round((1 - expenses / income) * 100)}%
-                  </span>
+                  <span>Same period last month</span>
+                  <span>Total balance</span>
                 </div>
               </div>
-  
-              {/* Circular score visual */}
-              <div className="w-40 h-40 mx-auto md:mx-0 relative">
-                <div className="absolute inset-0 rounded-full border-4 border-slate-800" />
-                <div className="absolute inset-1 rounded-full border-4 border-emerald-500/80" />
-                <div className="absolute inset-4 rounded-full bg-slate-950/90 flex flex-col items-center justify-center">
-                  <span className="text-xs text-slate-400">Score</span>
-                  <span className="text-3xl font-bold">{score}</span>
-                  <span className="text-[10px] text-emerald-400 mt-1">
-                    Healthy
-                  </span>
+              <div className="h-40 bg-slate-50 rounded-2xl relative overflow-hidden">
+                {/* Simple fake line/area representation */}
+                <div className="absolute inset-x-4 bottom-6 flex items-end gap-4">
+                  {["Jan", "Feb", "Mar", "Apr", "May", "Jun"].map((m, i) => (
+                    <div key={m} className="flex-1 flex flex-col items-center gap-1">
+                      <div className="w-full h-16 bg-gradient-to-t from-violet-200 to-violet-400 rounded-full opacity-70" />
+                      <span className="text-[10px] text-slate-400">{m}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute left-6 top-6 px-2 py-1 rounded-full bg-white shadow text-[10px] text-slate-600">
+                  ${s.totalBalance.toLocaleString()}
                 </div>
               </div>
             </div>
-  
-            {/* Monthly numbers */}
-            <div className="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-5 space-y-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                This month
-              </p>
-              <div className="space-y-2 text-sm">
-                <Row label="Income" value={income} color="text-emerald-400" />
-                <Row label="Expenses" value={expenses} color="text-rose-400" />
-                <Row label="Savings" value={savings} color="text-sky-400" />
+
+            {/* Statistics donut */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-4 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-sm font-semibold">Statistics</h2>
+                  <p className="text-[11px] text-slate-400">This month expense</p>
+                </div>
+                <div className="flex gap-2 text-[11px] text-slate-500">
+                  <span className="px-2 py-0.5 rounded-full bg-slate-100">
+                    Expense
+                  </span>
+                  <span>Details</span>
+                </div>
               </div>
-              <button className="mt-4 w-full rounded-2xl bg-slate-800/80 text-xs py-2.5 hover:bg-slate-700 transition">
-                + Add quick expense
-              </button>
+              <div className="flex-1 flex items-center justify-between gap-4">
+                <div className="relative w-32 h-32">
+                  <div className="absolute inset-0 rounded-full border-[10px] border-slate-100" />
+                  <div className="absolute inset-1 rounded-full border-[10px] border-violet-400 border-t-transparent border-l-transparent rotate-[-45deg]" />
+                  <div className="absolute inset-5 bg-white rounded-full flex flex-col items-center justify-center">
+                    <span className="text-[10px] text-slate-400">This month</span>
+                    <span className="text-sm font-semibold">
+                      ${s.expense.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-2 text-[11px]">
+                  <LegendItem color="bg-violet-500" label="Money transfer" value="24%" />
+                  <LegendItem color="bg-indigo-400" label="Cafes & Restaurants" value="18%" />
+                  <LegendItem color="bg-sky-400" label="Rent" value="30%" />
+                  <LegendItem color="bg-emerald-400" label="Education" value="12%" />
+                  <LegendItem color="bg-amber-400" label="Food & Groceries" value="16%" />
+                </div>
+              </div>
             </div>
           </section>
-  
-          {/* Middle: categories + what-if */}
-          <section className="grid gap-4 md:grid-cols-[2fr,1.2fr]">
-            {/* Categories */}
-            <div className="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-slate-100">
-                  Spending by category
+
+          {/* Bottom: comparing budget and expense */}
+          <section className="bg-white rounded-3xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold">
+                  Comparing of budget and expense
                 </h2>
-                <span className="text-[11px] text-slate-400">
-                  Intelligent caps suggested
+                <p className="text-[11px] text-slate-400">This year</p>
+              </div>
+              <div className="flex gap-3 text-[11px] text-slate-500">
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-violet-400" /> Expense
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-slate-300" /> Budget
                 </span>
               </div>
-              <ul className="space-y-2 text-xs">
-                {Object.entries(categoryTotals).map(([cat, amount]) => {
-                  const pct = Math.round((amount / expenses) * 100);
-                  return (
-                    <li key={cat} className="space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-slate-300">{cat}</span>
-                        <span className="text-slate-100">
-                          ₹{amount.toLocaleString()} • {pct}%
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-500 via-sky-500 to-violet-500"
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                        />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
             </div>
-  
-            {/* What-if card */}
-            <div className="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-5 flex flex-col justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-100 mb-1">
-                  What if you tweak it?
-                </h2>
-                <p className="text-[11px] text-slate-300 mb-3">
-                  Slide your food & shopping budget. We’ll estimate your new
-                  monthly savings.
-                </p>
-                <p className="text-xs text-emerald-300">
-                  Example: Cutting ₹1,000 from eating out likely pushes savings to
-                  ~₹25,000 and score to ~88.
-                </p>
-              </div>
-              <button className="mt-4 w-full rounded-2xl bg-emerald-500/90 text-slate-950 text-xs py-2.5 font-semibold shadow-lg shadow-emerald-500/40">
-                Open interactive simulator
-              </button>
-            </div>
-          </section>
-  
-          {/* Bottom: coach preview */}
-          <section className="rounded-3xl bg-slate-900/70 border border-slate-800/80 p-5 flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <h2 className="text-sm font-semibold text-slate-100 mb-1">
-                Coach insight
-              </h2>
-              <p className="text-xs text-slate-300 mb-2">
-                “Most of your extra cash leaks into food and online shopping in
-                the last 10 days of the month. Set a soft cap of ₹1,500 for those
-                days and you’ll painlessly add ~₹3,000/month to savings.”
-              </p>
-              <p className="text-[11px] text-slate-400">
-                This message is generated from your real patterns, not generic
-                advice.
-              </p>
-            </div>
-            <div className="w-full md:w-64">
-              <button className="w-full rounded-2xl bg-slate-800/80 text-xs py-2.5 mb-2">
-                Ask “Why did my score drop?”
-              </button>
-              <button className="w-full rounded-2xl bg-slate-800/80 text-xs py-2.5">
-                Ask “Can I afford a new phone EMI?”
-              </button>
+            <div className="h-40 flex items-end gap-4 px-4">
+              {["Jan", "Feb", "Mar", "Apr", "May"].map((m, i) => (
+                <div key={m} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-7 rounded-t-xl bg-slate-200 h-16 relative overflow-hidden">
+                    <div className="absolute bottom-0 left-0 right-0 bg-violet-400 h-10 rounded-t-xl" />
+                  </div>
+                  <span className="text-[10px] text-slate-400">{m}</span>
+                </div>
+              ))}
             </div>
           </section>
         </main>
       </div>
-    );
-  }
-  
-  function Row({
-    label,
-    value,
-    color,
-  }: {
-    label: string;
-    value: number;
-    color: string;
-  }) {
-    return (
-      <div className="flex justify-between items-center">
-        <span className="text-slate-300 text-xs">{label}</span>
-        <span className={`font-semibold text-xs ${color}`}>
-          ₹{value.toLocaleString()}
+    </div>
+  );
+}
+
+function SidebarItem({ label, active = false }: { label: string; active?: boolean }) {
+  return (
+    <button
+      className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left ${
+        active
+          ? "bg-violet-500 text-white font-medium"
+          : "text-slate-600 hover:bg-slate-100"
+      } text-xs`}
+    >
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function StatCard({
+  title,
+  amount,
+  currency,
+  change,
+  sub,
+  badge,
+  negative,
+}: {
+  title: string;
+  amount: number;
+  currency: string;
+  change: string;
+  sub: string;
+  badge: string;
+  negative?: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-3xl border border-slate-200 p-4 flex flex-col justify-between">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="text-[11px] text-slate-400">{title}</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-xl font-semibold">
+              {currency} {amount.toLocaleString()}
+            </span>
+          </div>
+        </div>
+        <span
+          className={`text-[11px] px-2 py-0.5 rounded-full ${
+            negative ? "bg-rose-50 text-rose-500" : "bg-emerald-50 text-emerald-500"
+          }`}
+        >
+          {change}
         </span>
       </div>
-    );
-  }
+      <p className="text-[11px] text-slate-400 whitespace-pre-line mb-2">{sub}</p>
+      <p className="text-[10px] text-slate-400">{badge}</p>
+    </div>
+  );
+}
+
+function LegendItem({
+  color,
+  label,
+  value,
+}: {
+  color: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <span className={`w-3 h-3 rounded-full ${color}`} />
+        <span className="text-slate-600">{label}</span>
+      </div>
+      <span className="text-slate-500">{value}</span>
+    </div>
+  );
+}

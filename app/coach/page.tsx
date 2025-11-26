@@ -15,25 +15,45 @@ export default function CoachPage() {
   ]);
   const [input, setInput] = useState("");
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-    const userMsg = input.trim();
-    const nextMessages = [...messages, { from: "user", text: userMsg }];
-    setMessages(nextMessages);
-    setInput("");
+// app/coach/page.tsx
+// ... existing imports, type Message, component start ...
 
-    // For now: fake reply. We can plug real AI later.
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...nextMessages,
-        {
-          from: "ai",
-          text:
-            "Demo reply: Based on your latest month, food and shopping are the biggest levers. Cut ₹1,000 there to add ~₹3,000 to savings.",
-        },
-      ]);
-    }, 600);
-  };
+const sendMessage = async () => {
+  if (!input.trim()) return;
+  const userMsg = input.trim();
+
+  // Add user message
+  setMessages((prev) => [
+    ...prev,
+    { from: "user" as const, text: userMsg },
+  ]);
+  setInput("");
+
+  try {
+    const res = await fetch("/api/coach", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: userMsg }),
+    });
+
+    const data = (await res.json()) as { answer: string };
+
+    setMessages((prev) => [
+      ...prev,
+      { from: "ai" as const, text: data.answer },
+    ]);
+  } catch (e) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        from: "ai" as const,
+        text: "Sorry, I couldn't reach the coach service. Please try again.",
+      },
+    ]);
+  }
+};
+
+// ... existing JSX ...
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
