@@ -482,18 +482,28 @@ Need more help? Contact support at help@spendsphere.com
       categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Number(t.amount);
     });
 
-  // Improved budget calculation - use income-based or realistic multipliers
-  const budgetByCategory = Object.entries(categoryTotals).map(([cat, spent]) => {
-    // Use user-set budget if available, otherwise show "Not Set"
-    const userBudget = categoryBudgets[cat];
-    return {
-      id: cat,
-      name: cat,
-      limit: userBudget || 0, // 0 means not set
-      spent: Math.round(spent),
-      hasBudget: !!userBudget,
-    };
-  }).filter(b => b.hasBudget || b.spent > 0); // Show categories with budgets or spending
+  // Improved budget calculation - include user budgets even without current spending
+  const budgetCategorySet = new Set([
+    ...Object.keys(categoryTotals),
+    ...Object.keys(categoryBudgets),
+  ]);
+  const budgetByCategory = Array.from(budgetCategorySet)
+    .map((cat) => {
+      const spent = categoryTotals[cat] || 0;
+      const userBudget = categoryBudgets[cat];
+      return {
+        id: cat,
+        name: cat,
+        limit: userBudget || 0, // 0 means not set
+        spent: Math.round(spent),
+        hasBudget: !!userBudget,
+      };
+    })
+    .filter((b) => b.hasBudget || b.spent > 0); // Show categories with budgets or spending
+
+  const categoryListForBudgetManager = Array.from(
+    new Set([...Object.keys(categoryTotals), ...Object.keys(categoryBudgets)])
+  );
 
   // Wallet functions
   function handleAddAccount() {
@@ -1288,10 +1298,10 @@ Need more help? Contact support at help@spendsphere.com
                     <h3 className="text-xs font-semibold mb-3 text-slate-900">Set Budgets for Categories</h3>
                     <div className="space-y-3">
                       {/* Set budget for existing categories */}
-                      {Object.keys(categoryTotals).length > 0 && (
+                      {categoryListForBudgetManager.length > 0 && (
                         <div className="space-y-2">
                           <p className="text-[11px] text-slate-600 font-medium">Current Spending Categories:</p>
-                          {Object.keys(categoryTotals).map((cat) => {
+                          {categoryListForBudgetManager.map((cat) => {
                             const currentBudget = categoryBudgets[cat];
                             const isEditing = editingBudgetCategory === cat;
                             return (
