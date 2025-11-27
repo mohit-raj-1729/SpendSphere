@@ -41,12 +41,128 @@ export default function AppDashboard() {
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<"all" | "income" | "expense">(
     "all"
   );
+    // Month filter
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+
+
 
   // Money coach
   const [coachQuestion, setCoachQuestion] = useState("");
   const [coachAnswer, setCoachAnswer] = useState("");
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachError, setCoachError] = useState<string | null>(null);
+
+  // Goals
+  const [goals, setGoals] = useState<Array<{
+    id: string;
+    title: string;
+    target_amount: number;
+    current_amount: number;
+    target_date: string | null;
+    description: string | null;
+    icon: string;
+    color: string;
+  }>>([]);
+  const [goalsLoading, setGoalsLoading] = useState(true);
+  const [showGoalForm, setShowGoalForm] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<typeof goals[0] | null>(null);
+  
+  // Goal form state
+  const [goalTitle, setGoalTitle] = useState("");
+  const [goalTarget, setGoalTarget] = useState("");
+  const [goalDate, setGoalDate] = useState("");
+  const [goalDescription, setGoalDescription] = useState("");
+  const [goalIcon, setGoalIcon] = useState("🎯");
+  const [goalColor, setGoalColor] = useState("violet");
+  const [goalSaving, setGoalSaving] = useState(false);
+
+    // Import Modal
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importPreview, setImportPreview] = useState<Array<{
+      date: string;
+      description: string;
+      merchant: string | null;
+      amount: number;
+      type: "income" | "expense";
+      category: string;
+    }> | null>(null);
+    const [importLoading, setImportLoading] = useState(false);
+    const [imported, setImported] = useState<number | null>(null);
+    const [importError, setImportError] = useState<string | null>(null);
+  
+    // Import functions
+    const handleImportPreview = async () => {
+      if (!importFile) return;
+      setImportLoading(true);
+      setImportError(null);
+      setImported(null);
+  
+      const formData = new FormData();
+      formData.append("file", importFile);
+      formData.append("mode", "preview");
+  
+      const res = await fetch("/api/import-bank", {
+        method: "POST",
+        body: formData,
+      });
+  
+      if (!res.ok) {
+        setImportError("Failed to parse file. Please check CSV format.");
+        setImportLoading(false);
+        return;
+      }
+  
+      const data = await res.json();
+      setImportPreview(data.transactions || []);
+      setImportLoading(false);
+    };
+  
+    const handleImportSubmit = async () => {
+      if (!importFile) return;
+  
+      setImportLoading(true);
+      setImportError(null);
+  
+      const formData = new FormData();
+      formData.append("file", importFile);
+      formData.append("mode", "import");
+  
+      const res = await fetch("/api/import-bank", {
+        method: "POST",
+        body: formData,
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        setImportError(data.error || "Import failed.");
+        setImportLoading(false);
+        return;
+      }
+  
+      setImported(data.imported || 0);
+      setImportLoading(false);
+  
+      // Refresh data and close modal after 1.5 seconds
+      setTimeout(() => {
+        void loadSummary();
+        void loadTransactions();
+        void loadGoals();
+        setShowImportModal(false);
+        setImportFile(null);
+        setImportPreview(null);
+        setImported(null);
+      }, 1500);
+    };
+  
+    const resetImportModal = () => {
+      setImportFile(null);
+      setImportPreview(null);
+      setImported(null);
+      setImportError(null);
+      setShowImportModal(false);
+    };
 
   // Default summary when no data (all zeros)
   const defaultSummary: Summary = {
@@ -62,14 +178,129 @@ export default function AppDashboard() {
 
   const s = summary ?? defaultSummary;
 
+  // Load goals
+  async function loadGoals() {
+    try {
+      setGoalsLoading(true);
+      const res = await fetch("/api/goals");
+      const data = await res.json();
+      setGoals(data.goals || []);
+    } catch (err) {
+      console.error("Failed to load goals", err);
+    } finally {
+      setGoalsLoading(false);
+    }
+  }
+
+  // Save goal
+  async function saveGoal() {
+    if (!goalTitle.trim() || !goalTarget) return;
+
+    setGoalSaving(true);
+    try {
+      const goalData = {
+        title: goalTitle.trim(),
+        target_amount: Number(goalTarget),
+        target_date: goalDate || null,
+        description: goalDescription.trim() || null,
+        icon: goalIcon,
+        color: goalColor,
+      };
+
+      if (editingGoal) {
+        // Update existing goal
+        const res = await fetch(`/api/goals/${editingGoal.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(goalData),
+        });
+        if (!res.ok) throw new Error("Failed to update goal");
+      } else {
+        // Create new goal
+        const res = await fetch("/api/goals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(goalData),
+        });
+        if (!res.ok) throw new Error("Failed to create goal");
+      }
+
+      // Reset form
+      setGoalTitle("");
+      setGoalTarget("");
+      setGoalDate("");
+      setGoalDescription("");
+      setGoalIcon("🎯");
+      setGoalColor("violet");
+      setShowGoalForm(false);
+      setEditingGoal(null);
+      await loadGoals();
+    } catch (err) {
+      console.error("Failed to save goal", err);
+      alert("Failed to save goal. Please try again.");
+    } finally {
+      setGoalSaving(false);
+    }
+  }
+
+  // Delete goal
+  async function deleteGoal(id: string) {
+    if (!confirm("Are you sure you want to delete this goal?")) return;
+
+    try {
+      const res = await fetch(`/api/goals/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete goal");
+      await loadGoals();
+    } catch (err) {
+      console.error("Failed to delete goal", err);
+      alert("Failed to delete goal. Please try again.");
+    }
+  }
+
+  // Edit goal
+  function editGoal(goal: typeof goals[0]) {
+    setEditingGoal(goal);
+    setGoalTitle(goal.title);
+    setGoalTarget(goal.target_amount.toString());
+    setGoalDate(goal.target_date || "");
+    setGoalDescription(goal.description || "");
+    setGoalIcon(goal.icon);
+    setGoalColor(goal.color);
+    setShowGoalForm(true);
+  }
+    // Get available months from transactions
+    const getAvailableMonths = (): string[] => {
+      const months = new Set<string>();
+      transactions.forEach((t) => {
+        const date = new Date(t.date);
+        if (!isNaN(date.getTime())) {
+          const monthKey = date.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+          months.add(monthKey);
+        }
+      });
+      return Array.from(months).sort().reverse(); // Most recent first
+    };
+  
+    // Filter transactions by selected month
+    const getFilteredTransactions = () => {
+      if (!selectedMonth) return transactions;
+      return transactions.filter((t) => {
+        const date = new Date(t.date);
+        const monthKey = date.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+        return monthKey === selectedMonth;
+      });
+    };
+
   useEffect(() => {
     void loadSummary();
     void loadTransactions();
+    void loadGoals();
     
     // Auto-refresh every 5 seconds
     const interval = setInterval(() => {
       void loadSummary();
       void loadTransactions();
+      void loadGoals();
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -254,9 +485,35 @@ export default function AppDashboard() {
         </nav>
 
         <div className="px-4 pb-4 pt-2 border-t border-slate-100 text-xs space-y-2">
-          <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100">
-            <span>Help</span>
-          </button>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-xs text-slate-600 bg-slate-50 relative group cursor-pointer">
+              <span>📅</span>
+              <span>{selectedMonth || s.month}</span>
+              {getAvailableMonths().length > 1 && (
+                <div className="absolute top-full right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[200px] hidden group-hover:block">
+                  <div className="p-2">
+                    <button
+                      onClick={() => setSelectedMonth(null)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-slate-50 ${
+                        !selectedMonth ? "bg-violet-50 text-violet-600" : ""
+                      }`}
+                    >
+                      All Months ({s.month})
+                    </button>
+                    {getAvailableMonths().map((month) => (
+                      <button
+                        key={month}
+                        onClick={() => setSelectedMonth(month)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-slate-50 ${
+                          selectedMonth === month ? "bg-violet-50 text-violet-600" : ""
+                        }`}
+                      >
+                        {month}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           <button className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-50">
             <span>Log out</span>
           </button>
@@ -272,12 +529,12 @@ export default function AppDashboard() {
             <p className="text-xs text-slate-400">{headerSubMap[activeSection]}</p>
           </div>
           <div className="flex items-center gap-4">
-            <a
-              href="/import"
-              className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white font-medium"
+          <button
+              onClick={() => setShowImportModal(true)}
+              className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white font-medium hover:bg-violet-600"
             >
               Import CSV
-            </a>
+            </button>
             <button className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-xs text-slate-600 bg-slate-50">
               <span>📅</span>
               <span>{s.month}</span>
@@ -287,6 +544,7 @@ export default function AppDashboard() {
               onClick={() => {
                 void loadSummary();
                 void loadTransactions();
+                void loadGoals();
               }}
             >
               {loadingSummary ? "Refreshing..." : "🔄 Refresh"}
@@ -442,6 +700,49 @@ export default function AppDashboard() {
                   </div>
                 )}
               </section>
+
+              {/* Goals Overview */}
+              {goals.length > 0 && (
+                <section className="bg-white rounded-3xl border border-slate-200 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h2 className="text-sm font-semibold">Savings Goals</h2>
+                      <p className="text-[11px] text-slate-400">Track your progress</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveSection("Goals")}
+                      className="text-xs text-violet-600 hover:text-violet-700"
+                    >
+                      View All →
+                    </button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {goals.slice(0, 2).map((goal) => {
+                      const progress = Math.min((goal.current_amount / goal.target_amount) * 100, 100);
+                      return (
+                        <div key={goal.id} className="p-3 bg-slate-50 rounded-2xl">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg">{goal.icon}</span>
+                            <span className="text-xs font-semibold">{goal.title}</span>
+                          </div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] text-slate-600">
+                              ₹{goal.current_amount.toLocaleString()} / ₹{goal.target_amount.toLocaleString()}
+                            </span>
+                            <span className="text-[11px] font-semibold">{progress.toFixed(0)}%</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full bg-${goal.color}-500 rounded-full`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
             </>
           )}
 
@@ -549,7 +850,7 @@ export default function AppDashboard() {
             </section>
           )}
 
-          {/* Other sections - simplified */}
+          {/* Dashboard */}
           {activeSection === "Dashboard" && (
             <section className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
@@ -582,6 +883,7 @@ export default function AppDashboard() {
             </section>
           )}
 
+          {/* Budget */}
           {activeSection === "Budget" && (
             <section className="bg-white rounded-3xl border border-slate-200 p-4 text-sm space-y-4">
               <p className="text-xs text-slate-500">
@@ -639,9 +941,255 @@ export default function AppDashboard() {
             </section>
           )}
 
+          {/* Goals */}
           {activeSection === "Goals" && (
             <section className="space-y-4">
-              <div className="bg-white rounded-3xl border border-slate-200 p-4 text-sm">
+              {/* Header with Add Goal button */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold">Savings Goals</h2>
+                  <p className="text-[11px] text-slate-400">Track your financial goals and progress</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingGoal(null);
+                    setGoalTitle("");
+                    setGoalTarget("");
+                    setGoalDate("");
+                    setGoalDescription("");
+                    setGoalIcon("🎯");
+                    setGoalColor("violet");
+                    setShowGoalForm(!showGoalForm);
+                  }}
+                  className="px-4 py-2 rounded-full text-xs bg-violet-500 text-white font-medium hover:bg-violet-600"
+                >
+                  {showGoalForm ? "Cancel" : "+ New Goal"}
+                </button>
+              </div>
+
+              {/* Goal Form */}
+              {showGoalForm && (
+                <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
+                  <h3 className="text-sm font-semibold">
+                    {editingGoal ? "Edit Goal" : "Create New Goal"}
+                  </h3>
+                  
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-xs text-slate-600 mb-1 block">Goal Title *</label>
+                      <input
+                        type="text"
+                        value={goalTitle}
+                        onChange={(e) => setGoalTitle(e.target.value)}
+                        placeholder="e.g., Emergency Fund"
+                        className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs text-slate-600 mb-1 block">Target Amount (₹) *</label>
+                      <input
+                        type="number"
+                        value={goalTarget}
+                        onChange={(e) => setGoalTarget(e.target.value)}
+                        placeholder="50000"
+                        className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs text-slate-600 mb-1 block">Target Date</label>
+                      <input
+                        type="date"
+                        value={goalDate}
+                        onChange={(e) => setGoalDate(e.target.value)}
+                        className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs text-slate-600 mb-1 block">Icon</label>
+                      <div className="flex gap-2">
+                        {["🎯", "💰", "🏠", "🚗", "✈️", "💍", "📱", "🎓"].map((icon) => (
+                          <button
+                            key={icon}
+                            type="button"
+                            onClick={() => setGoalIcon(icon)}
+                            className={`w-10 h-10 rounded-xl border-2 text-lg ${
+                              goalIcon === icon
+                                ? "border-violet-500 bg-violet-50"
+                                : "border-slate-200 hover:border-slate-300"
+                            }`}
+                          >
+                            {icon}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs text-slate-600 mb-1 block">Color Theme</label>
+                      <div className="flex gap-2">
+                        {[
+                          { name: "violet", color: "bg-violet-500" },
+                          { name: "emerald", color: "bg-emerald-500" },
+                          { name: "blue", color: "bg-blue-500" },
+                          { name: "rose", color: "bg-rose-500" },
+                          { name: "amber", color: "bg-amber-500" },
+                        ].map((c) => (
+                          <button
+                            key={c.name}
+                            type="button"
+                            onClick={() => setGoalColor(c.name)}
+                            className={`w-8 h-8 rounded-lg ${c.color} ${
+                              goalColor === c.name ? "ring-2 ring-offset-2 ring-slate-400" : ""
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-slate-600 mb-1 block">Description</label>
+                      <textarea
+                        value={goalDescription}
+                        onChange={(e) => setGoalDescription(e.target.value)}
+                        placeholder="Add a note about this goal..."
+                        rows={3}
+                        className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={saveGoal}
+                      disabled={goalSaving || !goalTitle.trim() || !goalTarget}
+                      className="px-4 py-2 rounded-full text-xs bg-violet-500 text-white font-medium hover:bg-violet-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {goalSaving ? "Saving..." : editingGoal ? "Update Goal" : "Create Goal"}
+                    </button>
+                    {editingGoal && (
+                      <button
+                        onClick={() => {
+                          setShowGoalForm(false);
+                          setEditingGoal(null);
+                        }}
+                        className="px-4 py-2 rounded-full text-xs border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Goals List */}
+              {goalsLoading ? (
+                <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center">
+                  <p className="text-xs text-slate-400">Loading goals...</p>
+                </div>
+              ) : goals.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center">
+                  <div className="text-4xl mb-2">🎯</div>
+                  <p className="text-sm font-semibold mb-1">No goals yet</p>
+                  <p className="text-xs text-slate-400 mb-4">Create your first savings goal to get started</p>
+                  <button
+                    onClick={() => setShowGoalForm(true)}
+                    className="px-4 py-2 rounded-full text-xs bg-violet-500 text-white font-medium hover:bg-violet-600"
+                  >
+                    Create Goal
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {goals.map((goal) => {
+                    const progress = Math.min((goal.current_amount / goal.target_amount) * 100, 100);
+                    const remaining = goal.target_amount - goal.current_amount;
+                    const daysRemaining = goal.target_date
+                      ? Math.ceil((new Date(goal.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                      : null;
+
+                    return (
+                      <div
+                        key={goal.id}
+                        className="bg-white rounded-3xl border border-slate-200 p-6 hover:shadow-lg transition-shadow"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-12 h-12 rounded-2xl bg-${goal.color}-100 flex items-center justify-center text-2xl`}>
+                              {goal.icon}
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-semibold">{goal.title}</h3>
+                              {goal.description && (
+                                <p className="text-[11px] text-slate-500 mt-0.5">{goal.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => editGoal(goal)}
+                              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                              title="Edit"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => deleteGoal(goal.id)}
+                              className="p-1.5 rounded-lg hover:bg-rose-100 text-slate-400 hover:text-rose-600"
+                              title="Delete"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs text-slate-600">Progress</span>
+                              <span className="text-xs font-semibold">{progress.toFixed(0)}%</span>
+                            </div>
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full bg-${goal.color}-500 rounded-full transition-all`}
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <div className="text-slate-400 mb-0.5">Saved</div>
+                              <div className="font-semibold">₹{goal.current_amount.toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-slate-400 mb-0.5">Target</div>
+                              <div className="font-semibold">₹{goal.target_amount.toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-slate-400 mb-0.5">Remaining</div>
+                              <div className="font-semibold text-rose-600">₹{remaining.toLocaleString()}</div>
+                            </div>
+                            {daysRemaining !== null && (
+                              <div>
+                                <div className="text-slate-400 mb-0.5">Days Left</div>
+                                <div className={`font-semibold ${daysRemaining < 0 ? "text-rose-600" : ""}`}>
+                                  {daysRemaining < 0 ? "Overdue" : daysRemaining}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Money Coach */}
+              <div className="bg-white rounded-3xl border border-slate-200 p-4 text-sm mt-6">
                 <h2 className="text-sm font-semibold mb-2">Ask the money coach</h2>
                 <p className="text-[11px] text-slate-500 mb-2">
                   Ask for short, practical tips about your finances.
@@ -674,18 +1222,180 @@ export default function AppDashboard() {
             </section>
           )}
 
+          {/* Wallet */}
           {activeSection === "Wallet" && (
             <section className="bg-white rounded-3xl border border-slate-200 p-4 text-sm space-y-4">
               <p className="text-xs text-slate-400">Wallet feature coming soon.</p>
             </section>
           )}
 
+          {/* Settings */}
           {activeSection === "Settings" && (
             <section className="bg-white rounded-3xl border border-slate-200 p-4 text-sm space-y-4">
               <p className="text-xs text-slate-400">Settings feature coming soon.</p>
             </section>
           )}
         </main>
+              {/* Import Modal Overlay */}
+      {showImportModal && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={resetImportModal}
+        >
+          <div
+            className="bg-white rounded-3xl border border-slate-200 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-3xl">
+              <div>
+                <h2 className="text-lg font-semibold">Import Bank Statement</h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Upload CSV from HDFC, SBI, ICICI etc. We'll parse, categorise, and import.
+                </p>
+              </div>
+              <button
+                onClick={resetImportModal}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              {/* Upload Section */}
+              <section className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 p-6">
+                <div className="flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-violet-100 flex items-center justify-center">
+                    <span className="text-2xl">📄</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1">Upload CSV File</p>
+                    <p className="text-xs text-slate-500">
+                      Export from your bank (CSV), then upload it here. We support common formats.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <label className="px-4 py-2 rounded-full text-xs bg-violet-500 text-white font-medium hover:bg-violet-600 cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".csv"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setImportFile(file);
+                          setImportPreview(null);
+                          setImported(null);
+                          setImportError(null);
+                        }}
+                      />
+                      {importFile ? "Change File" : "Choose File"}
+                    </label>
+                    {importFile && (
+                      <div className="px-4 py-2 rounded-full text-xs bg-slate-200 text-slate-700">
+                        {importFile.name}
+                      </div>
+                    )}
+                  </div>
+                  {importFile && (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleImportPreview}
+                        disabled={importLoading}
+                        className="px-4 py-2 rounded-full text-xs bg-violet-500 text-white disabled:opacity-60 disabled:cursor-not-allowed hover:bg-violet-600"
+                      >
+                        {importLoading ? "Processing..." : "Preview Transactions"}
+                      </button>
+                      <button
+                        onClick={handleImportSubmit}
+                        disabled={!importPreview || importLoading}
+                        className="px-4 py-2 rounded-full text-xs bg-emerald-500 text-white disabled:opacity-60 disabled:cursor-not-allowed hover:bg-emerald-600"
+                      >
+                        {importLoading ? "Importing..." : "Import All"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {importError && (
+                  <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl">
+                    <p className="text-xs text-rose-600">{importError}</p>
+                  </div>
+                )}
+                {imported !== null && (
+                  <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                    <p className="text-xs text-emerald-600">
+                      ✅ Successfully imported {imported} transactions!
+                    </p>
+                  </div>
+                )}
+              </section>
+
+                           {/* Preview Section */}
+                           {importPreview !== null && importPreview.length > 0 && (
+                <section className="bg-white rounded-2xl border border-slate-200 p-4">
+                  <p className="text-sm font-semibold mb-2">
+                    Preview ({importPreview.length} transactions)
+                  </p>
+                  <p className="text-[11px] text-slate-400 mb-3">
+                    This is how we understood your bank statement. Categories are auto-detected
+                    based on merchant/keywords.
+                  </p>
+                  <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                    <table className="min-w-full text-[11px] border-collapse">
+                      <thead className="bg-slate-50 sticky top-0">
+                        <tr className="text-slate-500">
+                          <th className="text-left px-3 py-2 border-b border-slate-200">Date</th>
+                          <th className="text-left px-3 py-2 border-b border-slate-200">Description</th>
+                          <th className="text-left px-3 py-2 border-b border-slate-200">Category</th>
+                          <th className="text-left px-3 py-2 border-b border-slate-200">Type</th>
+                          <th className="text-right px-3 py-2 border-b border-slate-200">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreview.map((t, idx) => (
+                          <tr key={idx} className="border-b border-slate-100">
+                            <td className="px-3 py-2 text-slate-600">{t.date}</td>
+                            <td className="px-3 py-2 text-slate-700">{t.description}</td>
+                            <td className="px-3 py-2 text-slate-500">{t.category}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] ${
+                                  t.type === "income"
+                                    ? "bg-emerald-50 text-emerald-600"
+                                    : "bg-rose-50 text-rose-600"
+                                }`}
+                              >
+                                {t.type}
+                              </span>
+                            </td>
+                            <td
+                              className={`px-3 py-2 text-right font-medium ${
+                                t.type === "income" ? "text-emerald-600" : "text-rose-600"
+                              }`}
+                            >
+                              {t.type === "income" ? "+" : "-"}₹{t.amount.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
+
+              {importPreview !== null && importPreview.length === 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                  <p className="text-xs text-amber-700">
+                    ⚠️ We couldn't detect any transactions in this CSV. Please check that
+                    the file has columns like Date, Description and Debit/Credit or Amount.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

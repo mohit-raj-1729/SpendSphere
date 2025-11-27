@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file");
     const mode = (formData.get("mode") as string) || "preview"; // "preview" | "import"
+    const userId = formData.get("user_id") as string; // Get user_id from form data
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
@@ -29,25 +30,40 @@ export async function POST(req: NextRequest) {
     }
 
     // IMPORT: only run if Supabase is configured
-    const url = process.env.SUPABASE_URL;
+    // Use the same variable names as other routes
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
     if (!url || !key) {
+      console.error("Supabase not configured:", { hasUrl: !!url, hasKey: !!key });
       return NextResponse.json(
         { error: "Supabase is not configured on the server." },
         { status: 500 }
       );
     }
 
+         // For demo/hackathon: generate a UUID if not provided
+    let finalUserId = userId;
+    if (!finalUserId) {
+      // Generate a UUID v4 format for demo user
+      finalUserId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
     const supabase = createClient(url, key);
 
     const { error } = await supabase.from("transactions").insert(
       parsed.map((t) => ({
+        user_id: finalUserId, // Link transactions to user
         date: t.date,
         description: t.description,
         merchant: t.merchant,
         amount: t.amount,
         type: t.type,
         category: t.category,
+        source: "bank_csv",
         raw: t,
       }))
     );
@@ -155,38 +171,93 @@ function normaliseDate(raw: string): string {
     // Remove quotes and whitespace
     let cleaned = raw.trim().replace(/['"]/g, "");
     
-    // Handle DD/MM/YYYY or DD-MM-YYYY
+    // Handle DD/MM/YYYY or DD-MM-YYYY (Indian format)
     if (cleaned.includes("/") || cleaned.includes("-")) {
       const separator = cleaned.includes("/") ? "/" : "-";
       const parts = cleaned.split(separator);
       
       if (parts.length === 3) {
-        let [d, m, y] = parts.map((p) => p.trim());
+        let [first, second, third] = parts.map((p) => p.trim());
         
         // If year is 2 digits, assume 20XX
-        if (y.length === 2) y = "20" + y;
+        if (third.length === 2) third = "20" + third;
         
-        // Determine if format is DD/MM/YYYY or MM/DD/YYYY by checking if first part > 12
-        const firstNum = parseInt(d, 10);
-        const secondNum = parseInt(m, 10);
+        const firstNum = parseInt(first, 10);
+        const secondNum = parseInt(second, 10);
         
-        // If first part > 12, it's likely DD/MM/YYYY
-        if (firstNum > 12 && secondNum <= 12) {
-          // Swap day and month
-          [d, m] = [m, d];
+        let day: string, month: string, year: string;
+        
+        // Determine format:
+        // If first part > 12, it MUST be DD/MM/YYYY (day can be 1-31, month is 1-12)
+        if (firstNum > 12) {
+          // DD/MM/YYYY format
+          day = first;
+          month = second;
+          year = third;
+        }
+        // If second part > 12, it MUST be DD/MM/YYYY
+        else if (secondNum > 12) {
+          // DD/MM/YYYY format
+          day = first;
+          month = second;
+          year = third;
+        }
+        // If both <= 12, assume DD/MM/YYYY for Indian context
+        else {
+          // For Indian format, assume DD/MM/YYYY
+          day = first;
+          month = second;
+          year = third;
         }
         
-        return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+        // Validate month (1-12)
+        const monthNum = parseInt(month, 10);
+        if (monthNum < 1 || monthNum > 12) {
+          // If invalid, try swapping (might be MM/DD/YYYY)
+          [day, month] = [month, day];
+        }
+        
+        // Validate day (1-31)
+        const dayNum = parseInt(day, 10);
+        if (dayNum < 1 || dayNum > 31) {
+          // Invalid date, return today
+          return new Date().toISOString().slice(0, 10);
+        }
+        
+        // Validate month again after potential swap
+        const finalMonthNum = parseInt(month, 10);
+        if (finalMonthNum < 1 || finalMonthNum > 12) {
+          return new Date().toISOString().slice(0, 10);
+        }
+        
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
       }
     }
     
     // If already in YYYY-MM-DD format, validate and return
     if (cleaned.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      return cleaned;
+      // Validate the date
+      const [y, m, d] = cleaned.split("-").map(Number);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return cleaned;
+      }
     }
     
     // Fallback: try to parse as Date
     try {
+      // Try parsing as DD/MM/YYYY first (Indian format)
+      if (cleaned.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/)) {
+        const parts = cleaned.split(/[\/\-]/);
+        if (parts.length === 3) {
+          const [d, m, y] = parts.map(Number);
+          const date = new Date(y, m - 1, d);
+          if (date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d) {
+            return date.toISOString().slice(0, 10);
+          }
+        }
+      }
+      
+      // Try standard Date parsing
       const parsed = new Date(cleaned);
       if (!isNaN(parsed.getTime())) {
         return parsed.toISOString().slice(0, 10);

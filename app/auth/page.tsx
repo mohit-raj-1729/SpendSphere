@@ -9,18 +9,77 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
-    // Simulate API call (replace with real auth later)
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      const endpoint = isSignUp ? "/api/auth/signup" : "/api/auth/signin";
+      const body = isSignUp ? { email, password, name } : { email, password };
 
-    // For now, just redirect to dashboard
-    // Later: validate credentials, store session, etc.
-    router.push("/app");
+      let res;
+      try {
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } catch (fetchError: any) {
+        // Network error (server not running, connection failed, etc.)
+        throw new Error(
+          `Network error: ${fetchError.message || "Could not connect to server. Make sure the dev server is running."}`
+        );
+      }
+
+      // Check if response is ok before trying to parse JSON
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        // Response is not valid JSON
+        throw new Error(`Server returned invalid response. Status: ${res.status}`);
+      }
+
+      if (!res.ok) {
+        // Show the error message from the API
+        const errorMessage = data.error || `Server error: ${res.status}`;
+        throw new Error(errorMessage);
+      }
+
+      // For sign up, session might be null if email confirmation is required
+      if (isSignUp && !data.session) {
+        setError(data.message || "Account created! Please check your email to confirm your account.");
+        // Clear form
+        setEmail("");
+        setPassword("");
+        setName("");
+        return;
+      }
+
+      // For sign in, session is required
+      if (!isSignUp && !data.session) {
+        throw new Error("No session returned. Please check your Supabase configuration.");
+      }
+
+      // Store session in localStorage
+      if (data.session) {
+        localStorage.setItem("supabase_session", JSON.stringify(data.session));
+        localStorage.setItem("user_id", data.user.id);
+        localStorage.setItem("user_email", data.user.email);
+      }
+
+      // Redirect to dashboard
+      router.push("/app");
+    } catch (err: any) {
+      console.error("Auth error:", err);
+      setError(err.message || "An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -44,7 +103,10 @@ export default function AuthPage() {
             <div className="flex gap-2 mb-6 p-1 bg-slate-50 rounded-2xl">
               <button
                 type="button"
-                onClick={() => setIsSignUp(false)}
+                onClick={() => {
+                  setIsSignUp(false);
+                  setError(null);
+                }}
                 className={`flex-1 px-4 py-2 rounded-xl text-xs font-medium transition-colors ${
                   !isSignUp
                     ? "bg-violet-500 text-white"
@@ -55,7 +117,10 @@ export default function AuthPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setIsSignUp(true)}
+                onClick={() => {
+                  setIsSignUp(true);
+                  setError(null);
+                }}
                 className={`flex-1 px-4 py-2 rounded-xl text-xs font-medium transition-colors ${
                   isSignUp
                     ? "bg-violet-500 text-white"
@@ -74,6 +139,12 @@ export default function AuthPage() {
                 ? "Start tracking your finances today"
                 : "Sign in to access your dashboard"}
             </p>
+
+            {error && (
+              <div className="mb-4 px-3 py-2 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                {error}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignUp && (
@@ -179,6 +250,7 @@ export default function AuthPage() {
                     setEmail("");
                     setPassword("");
                     setName("");
+                    setError(null);
                   }}
                   className="text-violet-600 hover:text-violet-700 font-medium"
                 >

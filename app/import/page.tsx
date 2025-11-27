@@ -49,12 +49,23 @@ export default function ImportPage() {
 
   const handleImport = async () => {
     if (!file) return;
+    
+    // Get user_id from localStorage (set during login)
+    const userId = localStorage.getItem("user_id");
+    
+    if (!userId) {
+      // Redirect to login if not logged in
+      window.location.href = "/auth";
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     const formData = new FormData();
     formData.append("file", file);
     formData.append("mode", "import");
+    formData.append("user_id", userId); // ← Add this line
 
     const res = await fetch("/api/import-bank", {
       method: "POST",
@@ -143,7 +154,7 @@ export default function ImportPage() {
 
         {preview !== null && (
           <section className="bg-white rounded-3xl border border-slate-200 p-4">
-            <p className="text-sm font-semibold mb-1">Preview (first 10 rows)</p>
+                        <p className="text-sm font-semibold mb-1">Preview ({preview.length} transactions)</p>
             {preview.length === 0 ? (
               <p className="text-[11px] text-rose-500">
                 We couldn&apos;t detect any transactions in this CSV. Please check that
@@ -155,7 +166,7 @@ export default function ImportPage() {
                   This is how we understood your bank statement. Categories are auto-detected
                   based on merchant/keywords.
                 </p>
-                <div className="overflow-x-auto text-[11px]">
+                <div className="overflow-x-auto max-h-[500px] overflow-y-auto text-[11px]">
                   <table className="min-w-full border-collapse">
                     <thead className="bg-slate-50">
                       <tr className="text-slate-500">
@@ -177,7 +188,7 @@ export default function ImportPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {preview.slice(0, 10).map((t, idx) => (
+                    {preview.map((t, idx) => (
                         <tr key={idx} className="border-b border-slate-100">
                           <td className="px-2 py-1">{t.date}</td>
                           <td className="px-2 py-1 text-slate-700">{t.description}</td>
