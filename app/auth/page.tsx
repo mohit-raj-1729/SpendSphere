@@ -86,11 +86,12 @@ export default function AuthPage() {
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col">
       <header className="border-b border-slate-200 bg-white px-6 py-4">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-2xl bg-violet-500 flex items-center justify-center text-white font-bold">
-            F
+          <div className="relative w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent"></div>
+            <span className="relative text-xs font-extrabold tracking-tighter">SS</span>
           </div>
           <div>
-            <div className="text-sm font-semibold">FlowFunds</div>
+            <div className="text-sm font-semibold">SpendSphere</div>
             <div className="text-[11px] text-slate-400">Smart budgeting</div>
           </div>
         </div>
@@ -261,7 +262,7 @@ export default function AuthPage() {
           </div>
 
           <p className="text-xs text-slate-400 text-center mt-4">
-            By continuing, you agree to FlowFunds' Terms of Service and Privacy
+            By continuing, you agree to SpendSphere' Terms of Service and Privacy
             Policy.
           </p>
         </div>

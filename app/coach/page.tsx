@@ -58,7 +58,7 @@ const sendMessage = async () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
       <header className="border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <span className="font-semibold">FlowFunds Coach</span>
+        <span className="font-semibold">SpendSphere Coach</span>
         <a href="/app" className="text-xs text-slate-400 hover:text-slate-100">
           ← Back to dashboard
         </a>

@@ -6,11 +6,12 @@ export default function Home() {
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col">
       <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-2xl bg-violet-500 flex items-center justify-center text-white font-bold">
-            F
+          <div className="relative w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent"></div>
+            <span className="relative text-xs font-extrabold tracking-tighter">SS</span>
           </div>
           <div>
-            <div className="text-sm font-semibold">FlowFunds</div>
+            <div className="text-sm font-semibold">SpendSphere</div>
             <div className="text-[11px] text-slate-400">Smart budgeting</div>
           </div>
         </div>
@@ -39,7 +40,7 @@ export default function Home() {
             Your money, in one honest dashboard.
           </h1>
           <p className="max-w-xl mx-auto text-sm text-slate-600 mb-8">
-            FlowFunds watches your spending patterns, builds smart budgets, and
+            SpendSphere watches your spending patterns, builds smart budgets, and
             explains your month in plain language — not bank jargon.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

@@ -154,11 +154,7 @@ export default function ImportPage() {
 
         {preview !== null && (
           <section className="bg-white rounded-3xl border border-slate-200 p-4">
-<<<<<<< HEAD
             <p className="text-sm font-semibold mb-1">Preview (first 10 rows)</p>
-=======
-                        <p className="text-sm font-semibold mb-1">Preview ({preview.length} transactions)</p>
->>>>>>> 5c3c512ca8bf45b2c8592ca72b6918bdc0301090
             {preview.length === 0 ? (
               <p className="text-[11px] text-rose-500">
                 We couldn&apos;t detect any transactions in this CSV. Please check that
@@ -170,11 +166,7 @@ export default function ImportPage() {
                   This is how we understood your bank statement. Categories are auto-detected
                   based on merchant/keywords.
                 </p>
-<<<<<<< HEAD
                 <div className="overflow-x-auto text-[11px]">
-=======
-                <div className="overflow-x-auto max-h-[500px] overflow-y-auto text-[11px]">
->>>>>>> 5c3c512ca8bf45b2c8592ca72b6918bdc0301090
                   <table className="min-w-full border-collapse">
                     <thead className="bg-slate-50">
                       <tr className="text-slate-500">
@@ -196,11 +188,7 @@ export default function ImportPage() {
                       </tr>
                     </thead>
                     <tbody>
-<<<<<<< HEAD
                       {preview.slice(0, 10).map((t, idx) => (
-=======
-                    {preview.map((t, idx) => (
->>>>>>> 5c3c512ca8bf45b2c8592ca72b6918bdc0301090
                         <tr key={idx} className="border-b border-slate-100">
                           <td className="px-2 py-1">{t.date}</td>
                           <td className="px-2 py-1 text-slate-700">{t.description}</td>
