@@ -482,18 +482,28 @@ Need more help? Contact support at help@spendsphere.com
       categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Number(t.amount);
     });
 
-  // Improved budget calculation - use income-based or realistic multipliers
-  const budgetByCategory = Object.entries(categoryTotals).map(([cat, spent]) => {
-    // Use user-set budget if available, otherwise show "Not Set"
-    const userBudget = categoryBudgets[cat];
-    return {
-      id: cat,
-      name: cat,
-      limit: userBudget || 0, // 0 means not set
-      spent: Math.round(spent),
-      hasBudget: !!userBudget,
-    };
-  }).filter(b => b.hasBudget || b.spent > 0); // Show categories with budgets or spending
+  // Improved budget calculation - include user budgets even without current spending
+  const budgetCategorySet = new Set([
+    ...Object.keys(categoryTotals),
+    ...Object.keys(categoryBudgets),
+  ]);
+  const budgetByCategory = Array.from(budgetCategorySet)
+    .map((cat) => {
+      const spent = categoryTotals[cat] || 0;
+      const userBudget = categoryBudgets[cat];
+      return {
+        id: cat,
+        name: cat,
+        limit: userBudget || 0, // 0 means not set
+        spent: Math.round(spent),
+        hasBudget: !!userBudget,
+      };
+    })
+    .filter((b) => b.hasBudget || b.spent > 0); // Show categories with budgets or spending
+
+  const categoryListForBudgetManager = Array.from(
+    new Set([...Object.keys(categoryTotals), ...Object.keys(categoryBudgets)])
+  );
 
   // Wallet functions
   function handleAddAccount() {
@@ -742,9 +752,10 @@ Need more help? Contact support at help@spendsphere.com
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-slate-200 border-r flex flex-col">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex justify-center">
+      <div className="w-full max-w-5xl flex">
+        {/* Sidebar */}
+        <aside className="w-64 bg-white border-slate-200 border-r flex flex-col">
         <div className="px-6 py-5 flex items-center gap-2 border-b border-slate-100">
           <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg hover:shadow-xl transition-all group">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -808,170 +819,171 @@ Need more help? Contact support at help@spendsphere.com
             <span>Log out</span>
           </button>
         </div>
-      </aside>
+        </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col">
-        {/* Top bar */}
-        <header className="h-20 px-8 border-b bg-white flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">{headerTitleMap[activeSection]}</h1>
-            <p className="text-xs text-slate-400">{headerSubMap[activeSection]}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowImportCard(!showImportCard)}
-              className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white font-medium hover:bg-violet-600 transition-colors"
-            >
-              Import CSV
-            </button>
-            <div className="relative">
-              <button 
-                onClick={() => setShowMonthPicker(!showMonthPicker)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-xs text-slate-600 bg-slate-50 hover:bg-slate-100 transition-colors"
-              >
-                <span>📅</span>
-                <span>{selectedMonth}</span>
-                <span className="text-[10px]">▼</span>
-              </button>
-              
-              {/* Month Picker Dropdown */}
-              {showMonthPicker && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden">
-                  <div className="p-2 space-y-1">
-                    <button
-                      onClick={() => handleMonthSelect(0)}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-700"
-                    >
-                      This Month
-                    </button>
-                    <button
-                      onClick={() => handleMonthSelect(1)}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-700"
-                    >
-                      Last Month
-                    </button>
-                    <button
-                      onClick={() => handleMonthSelect(2)}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-700"
-                    >
-                      2 Months Ago
-                    </button>
-                    <button
-                      onClick={() => handleMonthSelect(3)}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-700"
-                    >
-                      3 Months Ago
-                    </button>
-                    <div className="border-t border-slate-100 my-1"></div>
-                    <button
-                      onClick={() => setShowMonthPicker(false)}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-400"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <button
-              className="px-3 py-1.5 rounded-full text-xs bg-slate-100 text-slate-600"
-              onClick={() => {
-                void loadSummary();
-                void loadTransactions();
-              }}
-            >
-              {loadingSummary ? "Refreshing..." : "🔄 Refresh"}
-            </button>
-            <button
-              className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white font-medium"
-              onClick={() => setActiveSection("Goals")}
-            >
-              Ask money coach
-            </button>
-            
-            {/* Profile Button with Dropdown */}
-            <div className="relative profile-menu-container">
-              <button
-                onClick={handleProfileClick}
-                className="w-9 h-9 rounded-full bg-slate-200 hover:bg-slate-300 transition-colors overflow-hidden flex items-center justify-center text-xs font-medium text-slate-700 cursor-pointer"
-                title={userEmail || "Profile"}
-              >
-                {getUserInitials()}
-              </button>
-              
-              {/* Profile Dropdown Menu */}
-              {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden">
-                  {/* User Info Section */}
-                  <div className="p-4 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-violet-500 flex items-center justify-center text-white font-semibold text-sm">
-                        {getUserInitials()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-700 truncate">
-                          {userName || "User"}
-                        </p>
-                        <p className="text-xs text-slate-400 truncate">
-                          {userEmail || "No email"}
-                        </p>
+        {/* Main content */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col w-full px-6 lg:px-10">
+            {/* Top bar */}
+            <header className="h-20 border-b bg-white flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-semibold">{headerTitleMap[activeSection]}</h1>
+                <p className="text-xs text-slate-400">{headerSubMap[activeSection]}</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setShowImportCard(!showImportCard)}
+                  className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white font-medium hover:bg-violet-600 transition-colors"
+                >
+                  Import CSV
+                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowMonthPicker(!showMonthPicker)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-xs text-slate-600 bg-slate-50 hover:bg-slate-100 transition-colors"
+                  >
+                    <span>📅</span>
+                    <span>{selectedMonth}</span>
+                    <span className="text-[10px]">▼</span>
+                  </button>
+
+                  {/* Month Picker Dropdown */}
+                  {showMonthPicker && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden">
+                      <div className="p-2 space-y-1">
+                        <button
+                          onClick={() => handleMonthSelect(0)}
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-700"
+                        >
+                          This Month
+                        </button>
+                        <button
+                          onClick={() => handleMonthSelect(1)}
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-700"
+                        >
+                          Last Month
+                        </button>
+                        <button
+                          onClick={() => handleMonthSelect(2)}
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-700"
+                        >
+                          2 Months Ago
+                        </button>
+                        <button
+                          onClick={() => handleMonthSelect(3)}
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-700"
+                        >
+                          3 Months Ago
+                        </button>
+                        <div className="border-t border-slate-100 my-1"></div>
+                        <button
+                          onClick={() => setShowMonthPicker(false)}
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-slate-50 text-slate-400"
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Menu Options */}
-                  <div className="p-2">
-                    <button
-                      onClick={() => {
-                        setActiveSection("Settings");
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <span>⚙️</span>
-                      <span>Settings</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveSection("Dashboard");
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <span>📊</span>
-                      <span>Dashboard</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleHelp();
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <span>❓</span>
-                      <span>Help & Support</span>
-                    </button>
-                    <div className="border-t border-slate-100 my-1"></div>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-rose-600 hover:bg-rose-50 transition-colors"
-                    >
-                      <span>🚪</span>
-                      <span>Log out</span>
-                    </button>
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        </header>
+                <button
+                  className="px-3 py-1.5 rounded-full text-xs bg-slate-100 text-slate-600"
+                  onClick={() => {
+                    void loadSummary();
+                    void loadTransactions();
+                  }}
+                >
+                  {loadingSummary ? "Refreshing..." : "🔄 Refresh"}
+                </button>
+                <button
+                  className="px-3 py-1.5 rounded-full text-xs bg-violet-500 text-white font-medium"
+                  onClick={() => setActiveSection("Goals")}
+                >
+                  Ask money coach
+                </button>
 
-        {/* Scrollable body */}
-        <main className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+                {/* Profile Button with Dropdown */}
+                <div className="relative profile-menu-container">
+                  <button
+                    onClick={handleProfileClick}
+                    className="w-9 h-9 rounded-full bg-slate-200 hover:bg-slate-300 transition-colors overflow-hidden flex items-center justify-center text-xs font-medium text-slate-700 cursor-pointer"
+                    title={userEmail || "Profile"}
+                  >
+                    {getUserInitials()}
+                  </button>
+
+                  {/* Profile Dropdown Menu */}
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden">
+                      {/* User Info Section */}
+                      <div className="p-4 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-violet-500 flex items-center justify-center text-white font-semibold text-sm">
+                            {getUserInitials()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-700 truncate">
+                              {userName || "User"}
+                            </p>
+                            <p className="text-xs text-slate-400 truncate">
+                              {userEmail || "No email"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Menu Options */}
+                      <div className="p-2">
+                        <button
+                          onClick={() => {
+                            setActiveSection("Settings");
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          <span>⚙️</span>
+                          <span>Settings</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveSection("Dashboard");
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          <span>📊</span>
+                          <span>Dashboard</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleHelp();
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          <span>❓</span>
+                          <span>Help & Support</span>
+                        </button>
+                        <div className="border-t border-slate-100 my-1"></div>
+                        <button
+                          onClick={() => {
+                            handleLogout();
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-rose-600 hover:bg-rose-50 transition-colors"
+                        >
+                          <span>🚪</span>
+                          <span>Log out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            {/* Scrollable body */}
+            <main className="flex-1 overflow-y-auto py-6 space-y-6">
           {/* Import CSV Card */}
           {showImportCard && (
             <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-lg">
@@ -1288,10 +1300,10 @@ Need more help? Contact support at help@spendsphere.com
                     <h3 className="text-xs font-semibold mb-3 text-slate-900">Set Budgets for Categories</h3>
                     <div className="space-y-3">
                       {/* Set budget for existing categories */}
-                      {Object.keys(categoryTotals).length > 0 && (
+                      {categoryListForBudgetManager.length > 0 && (
                         <div className="space-y-2">
                           <p className="text-[11px] text-slate-600 font-medium">Current Spending Categories:</p>
-                          {Object.keys(categoryTotals).map((cat) => {
+                          {categoryListForBudgetManager.map((cat) => {
                             const currentBudget = categoryBudgets[cat];
                             const isEditing = editingBudgetCategory === cat;
                             return (
@@ -2760,7 +2772,9 @@ Need more help? Contact support at help@spendsphere.com
               </div>
             </section>
           )}
-        </main>
+            </main>
+          </div>
+        </div>
       </div>
     </div>
   );

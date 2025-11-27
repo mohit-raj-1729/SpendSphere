@@ -3,9 +3,11 @@ import image from "next/image";
 // app/page.tsx
 export default function Home() {
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col">
-      <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col items-center">
+      <div className="w-full max-w-4xl flex-1 flex flex-col">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="w-full px-4 sm:px-6 lg:px-10 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
           <div className="relative w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent"></div>
             <span className="relative text-xs font-extrabold tracking-tighter">SS</span>
@@ -29,10 +31,12 @@ export default function Home() {
             Sign up
           </a>
         </nav>
+        </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 py-12">
-        <div className="max-w-2xl">
+      <main className="flex-1 flex flex-col items-center justify-center text-center py-12">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="max-w-2xl mx-auto">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400 mb-2">
             Automated Budgeting & Real-Time Insights
           </p>
@@ -58,9 +62,10 @@ export default function Home() {
             </a>
           </div>
         </div>
+        </div>
 
         {/* Feature cards preview */}
-        <div className="mt-16 grid gap-4 md:grid-cols-3 max-w-4xl w-full px-4">
+        <div className="mt-16 grid gap-4 md:grid-cols-3 w-full px-4 sm:px-6 lg:px-10">
           <div className="bg-white rounded-3xl border border-slate-200 p-4 text-left">
             <div className="w-10 h-10 rounded-2xl bg-violet-100 flex items-center justify-center mb-3">
               <span className="text-violet-600 text-lg">📊</span>
@@ -90,6 +95,7 @@ export default function Home() {
           </div>
         </div>
       </main>
+      </div>
     </div>
   );
 }
