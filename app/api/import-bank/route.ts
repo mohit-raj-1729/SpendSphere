@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+<<<<<<< HEAD
     if (!userId) {
       return NextResponse.json(
         { error: "User ID is required for importing transactions." },
@@ -49,11 +50,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+=======
+         // For demo/hackathon: generate a UUID if not provided
+    let finalUserId = userId;
+    if (!finalUserId) {
+      // Generate a UUID v4 format for demo user
+      finalUserId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+>>>>>>> 5c3c512ca8bf45b2c8592ca72b6918bdc0301090
     const supabase = createClient(url, key);
 
     const { error } = await supabase.from("transactions").insert(
       parsed.map((t) => ({
+<<<<<<< HEAD
         user_id: userId, // Link transactions to user
+=======
+        user_id: finalUserId, // Link transactions to user
+>>>>>>> 5c3c512ca8bf45b2c8592ca72b6918bdc0301090
         date: t.date,
         description: t.description,
         merchant: t.merchant,
@@ -168,12 +185,17 @@ function normaliseDate(raw: string): string {
     // Remove quotes and whitespace
     let cleaned = raw.trim().replace(/['"]/g, "");
     
+<<<<<<< HEAD
     // Handle DD/MM/YYYY or DD-MM-YYYY
+=======
+    // Handle DD/MM/YYYY or DD-MM-YYYY (Indian format)
+>>>>>>> 5c3c512ca8bf45b2c8592ca72b6918bdc0301090
     if (cleaned.includes("/") || cleaned.includes("-")) {
       const separator = cleaned.includes("/") ? "/" : "-";
       const parts = cleaned.split(separator);
       
       if (parts.length === 3) {
+<<<<<<< HEAD
         let [d, m, y] = parts.map((p) => p.trim());
         
         // If year is 2 digits, assume 20XX
@@ -190,16 +212,96 @@ function normaliseDate(raw: string): string {
         }
         
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+=======
+        let [first, second, third] = parts.map((p) => p.trim());
+        
+        // If year is 2 digits, assume 20XX
+        if (third.length === 2) third = "20" + third;
+        
+        const firstNum = parseInt(first, 10);
+        const secondNum = parseInt(second, 10);
+        
+        let day: string, month: string, year: string;
+        
+        // Determine format:
+        // If first part > 12, it MUST be DD/MM/YYYY (day can be 1-31, month is 1-12)
+        if (firstNum > 12) {
+          // DD/MM/YYYY format
+          day = first;
+          month = second;
+          year = third;
+        }
+        // If second part > 12, it MUST be DD/MM/YYYY
+        else if (secondNum > 12) {
+          // DD/MM/YYYY format
+          day = first;
+          month = second;
+          year = third;
+        }
+        // If both <= 12, assume DD/MM/YYYY for Indian context
+        else {
+          // For Indian format, assume DD/MM/YYYY
+          day = first;
+          month = second;
+          year = third;
+        }
+        
+        // Validate month (1-12)
+        const monthNum = parseInt(month, 10);
+        if (monthNum < 1 || monthNum > 12) {
+          // If invalid, try swapping (might be MM/DD/YYYY)
+          [day, month] = [month, day];
+        }
+        
+        // Validate day (1-31)
+        const dayNum = parseInt(day, 10);
+        if (dayNum < 1 || dayNum > 31) {
+          // Invalid date, return today
+          return new Date().toISOString().slice(0, 10);
+        }
+        
+        // Validate month again after potential swap
+        const finalMonthNum = parseInt(month, 10);
+        if (finalMonthNum < 1 || finalMonthNum > 12) {
+          return new Date().toISOString().slice(0, 10);
+        }
+        
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+>>>>>>> 5c3c512ca8bf45b2c8592ca72b6918bdc0301090
       }
     }
     
     // If already in YYYY-MM-DD format, validate and return
     if (cleaned.match(/^\d{4}-\d{2}-\d{2}$/)) {
+<<<<<<< HEAD
       return cleaned;
+=======
+      // Validate the date
+      const [y, m, d] = cleaned.split("-").map(Number);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return cleaned;
+      }
+>>>>>>> 5c3c512ca8bf45b2c8592ca72b6918bdc0301090
     }
     
     // Fallback: try to parse as Date
     try {
+<<<<<<< HEAD
+=======
+      // Try parsing as DD/MM/YYYY first (Indian format)
+      if (cleaned.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/)) {
+        const parts = cleaned.split(/[\/\-]/);
+        if (parts.length === 3) {
+          const [d, m, y] = parts.map(Number);
+          const date = new Date(y, m - 1, d);
+          if (date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d) {
+            return date.toISOString().slice(0, 10);
+          }
+        }
+      }
+      
+      // Try standard Date parsing
+>>>>>>> 5c3c512ca8bf45b2c8592ca72b6918bdc0301090
       const parsed = new Date(cleaned);
       if (!isNaN(parsed.getTime())) {
         return parsed.toISOString().slice(0, 10);
